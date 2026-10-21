@@ -1,0 +1,177 @@
+/* Base : tokens, reset et éléments partagés. */
+:root {
+  --bg: #FBF6EF;
+  --surface: #FFFFFF;
+  --surface-2: #F7F0E8;
+  --border: #E8DDD2;
+  --text: #2B2420;
+  --text-muted: #7A6E66;
+  --accent: #E07A5F;
+  --accent-strong: #B9502F;
+  --accent-soft: #FBEAE3;
+  --accent-line: #EDB9A8;
+  --positive: #3E8657;
+  --positive-soft: #E3F1E7;
+  --positive-field: #CFE7D7;
+  --saved: #3C6E9E; /* épargne du mois : mise de côté, ni dépensée ni libre */
+  --warning: #E9A23B;
+  --warning-soft: #FDF3E1;
+  --warning-ink: #8A5600;
+  --danger: #B0153F;
+  --danger-soft: #FBE3EA;
+
+  /* Répartition (anneau) : 5 teintes validées daltonisme + gris « Autres » */
+  --series-1: #2A78D6;
+  --series-2: #EB6834;
+  --series-3: #1BAF7A;
+  --series-4: #EDA100;
+  --series-5: #E87BA4;
+  --series-other: #B5ABA2;
+  --shadow: 0 1px 2px rgb(60 40 30 / 0.06), 0 8px 28px rgb(60 40 30 / 0.07);
+  --shadow-sm: 0 1px 2px rgb(60 40 30 / 0.08), 0 3px 10px rgb(60 40 30 / 0.06);
+
+  --radius: 18px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1F1B18;
+    --surface: #2A2521;
+    --surface-2: #332D28;
+    --border: #463E37;
+    --text: #F4ECE4;
+    --text-muted: #B3A79D;
+    --accent: #EE8E72;
+    --accent-strong: #F2A089;
+    --accent-soft: #3A2A24;
+    --accent-line: #7A4A3B;
+    --positive: #7CC495;
+    --positive-soft: #24352A;
+    --positive-field: #2E4A37;
+    --saved: #6F9FCC;
+    --warning-soft: #3B3122;
+    --warning-ink: #F2BE6B;
+    --danger: #FF7A9A;
+    --danger-soft: #3E2229;
+    --series-1: #3987E5;
+    --series-2: #D95926;
+    --series-3: #199E70;
+    --series-4: #C98500;
+    --series-5: #D55181;
+    --series-other: #6E655E;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 28px rgb(0 0 0 / 0.25);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 3px 10px rgb(0 0 0 / 0.2);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  padding: var(--safe-top) 16px var(--safe-bottom);
+  line-height: 1.45;
+}
+
+[hidden] { display: none !important; }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ——— Champs ——— */
+input[type="text"],
+input[type="date"],
+select {
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 7px 10px;
+  min-height: 40px;
+  min-width: 0;
+}
+
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent-strong);
+  cursor: pointer;
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+
+/* ——— Boutons ——— */
+.btn {
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 22px;
+  min-height: 44px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn--primary { background: var(--accent-strong); color: #FFFFFF; }
+.btn--ghost { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.btn--ghost:hover { background: var(--surface-2); }
+.btn--small { padding: 6px 14px; min-height: 34px; font-size: 0.88rem; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+
+::selection { background: var(--accent-soft); color: var(--text); }
+
+@media (prefers-color-scheme: dark) {
+  .btn--primary { color: #2B1A14; }
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.icon-btn:hover { background: var(--accent-soft); color: var(--accent-strong); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}

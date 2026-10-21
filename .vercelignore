@@ -1,0 +1,8 @@
+# Seule l'application est publiée : jamais de données, de sauvegardes ni de modèles d'IA
+models/
+sauvegardes/
+scripts/
+.impeccable/
+*.command
+PRODUCT.md
+DESIGN.md

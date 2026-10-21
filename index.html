@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Notre Budget</title>
+  <meta name="description" content="Notre budget à deux, 100 % local.">
+
+  <!-- Aucune ressource externe : tout est servi depuis l'app -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#FBF6EF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1F1B18" media="(prefers-color-scheme: dark)">
+
+  <!-- iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Budget">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/import.css">
+  <link rel="stylesheet" href="css/backup.css">
+</head>
+<body>
+  <header class="app-bar">
+    <a class="app-bar__brand" href="#/mois">
+      <img src="icons/icon.svg" width="28" height="28" alt="">
+      <span>Notre Budget</span>
+    </a>
+    <nav class="app-bar__nav" aria-label="Sections">
+      <a href="#/mois" data-route="mois">Le mois</a>
+      <a href="#/importer" data-route="importer">Importer</a>
+      <a href="#/sauvegarde" data-route="sauvegarde">Sauvegarde</a>
+    </nav>
+  </header>
+
+  <main id="app">
+
+    <!-- ——— Tableau de bord du mois ——— -->
+    <section class="dash" id="view-mois" data-view="mois" aria-labelledby="dash-month">
+      <div class="dash__toolbar">
+        <div class="month-nav">
+          <button type="button" class="icon-btn" id="dash-prev" aria-label="Mois précédent">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <h1 id="dash-month" aria-live="polite">Ce mois-ci</h1>
+          <button type="button" class="icon-btn" id="dash-next" aria-label="Mois suivant">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button type="button" class="btn btn--ghost btn--small" id="dash-today" hidden>Aujourd'hui</button>
+        </div>
+        <fieldset class="segmented" id="dash-view">
+          <legend class="visually-hidden">Afficher le budget de (double-clic sur un nom pour le changer)</legend>
+        </fieldset>
+      </div>
+
+      <p class="backup-banner" id="backup-banner" hidden>
+        <span id="backup-banner-text"></span>
+        <a class="link-btn" href="#/sauvegarde">Ouvrir la sauvegarde</a>
+      </p>
+
+      <!-- La barre du mois : revenus = longueur totale -->
+      <article class="card hero" aria-labelledby="hero-title">
+        <div class="hero__head">
+          <h2 id="hero-title">Reste à vivre</h2>
+          <p class="hero__note" id="hero-note"></p>
+        </div>
+        <!-- Le reste à vivre EST la partie libre de la barre : le montant y est posé -->
+        <div class="monthbar" id="month-bar">
+          <span class="monthbar__seg monthbar__seg--spent"></span>
+          <span class="monthbar__seg monthbar__seg--upcoming"></span>
+          <span class="monthbar__seg monthbar__seg--saved"></span>
+          <span class="monthbar__seg monthbar__seg--free" id="month-free"></span>
+          <span class="monthbar__seg monthbar__seg--over"></span>
+          <span class="monthbar__mark" aria-hidden="true"></span>
+        </div>
+        <p class="hero__value" id="hero-value"></p>
+        <p class="monthbar__equation" id="month-equation">
+          <span class="term"><span id="eq-income"></span> de revenus</span>
+          <span class="op-sign" id="eq-expected-sign" aria-hidden="true" hidden>+</span>
+          <span class="term" id="eq-expected-term" hidden><i class="key key--expected" aria-hidden="true"></i><span id="eq-expected"></span> attendus</span>
+          <span class="op-sign" aria-hidden="true">−</span>
+          <span class="term"><i class="key key--spent" aria-hidden="true"></i><span id="eq-spent"></span> déjà dépensés</span>
+          <span class="op-sign" id="eq-upcoming-sign" aria-hidden="true">−</span>
+          <span class="term" id="eq-upcoming-term"><i class="key key--upcoming" aria-hidden="true"></i><span id="eq-upcoming"></span> à venir</span>
+          <span class="op-sign" id="eq-saved-sign" aria-hidden="true" hidden>−</span>
+          <span class="term" id="eq-saved-term" hidden><i class="key key--saved" aria-hidden="true"></i><span id="eq-saved"></span> <span id="eq-saved-label">épargnés</span></span>
+          <span class="op-sign" aria-hidden="true">=</span>
+          <span class="term term--result"><i class="key key--free" aria-hidden="true"></i><strong id="eq-free"></strong></span>
+        </p>
+        <div class="hero__empty" id="dash-empty" hidden>
+          <p id="dash-empty-text"></p>
+          <div class="hero__empty-actions">
+            <a class="btn btn--primary" href="#/importer">Importer un relevé</a>
+            <button type="button" class="btn btn--ghost" id="dash-latest" hidden></button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Catégories & enveloppes : le cœur de l'analyse -->
+      <article class="card cats-card" id="cats-card" aria-labelledby="cats-title">
+        <header class="card__head card__head--row">
+          <div>
+            <h2 id="cats-title">Catégories &amp; enveloppes</h2>
+            <p class="card__hint" id="cats-hint"></p>
+          </div>
+          <button type="button" class="btn btn--ghost btn--small" id="env-edit">Ajuster les enveloppes</button>
+        </header>
+        <div class="cats__wrap">
+          <table class="cats" id="cats">
+            <thead>
+              <tr>
+                <th scope="col">Catégorie</th>
+                <th scope="col" class="num">Ce mois</th>
+                <th scope="col" class="num" id="cats-compare-head">Par rapport à la moyenne</th>
+                <th scope="col">Enveloppe</th>
+              </tr>
+            </thead>
+            <tbody id="cats-body"></tbody>
+          </table>
+        </div>
+        <p class="card__empty" id="cats-empty" hidden>Aucune dépense ce mois-ci.</p>
+        <footer class="env-bar" id="env-bar" hidden>
+          <p class="env-bar__total" id="env-total"></p>
+          <div class="env-bar__actions">
+            <button type="button" class="btn btn--ghost btn--small" id="env-suggest">Compléter d'après mes derniers mois</button>
+            <button type="button" class="btn btn--ghost btn--small" id="env-cancel">Annuler</button>
+            <button type="button" class="btn btn--primary btn--small" id="env-save">Enregistrer</button>
+          </div>
+        </footer>
+      </article>
+
+      <div class="dash__grid" id="dash-grid">
+        <article class="card" aria-labelledby="trend-title">
+          <header class="card__head card__head--row">
+            <div>
+              <h2 id="trend-title">Évolution sur 6 mois</h2>
+              <p class="card__hint" id="trend-hint"></p>
+            </div>
+            <button type="button" class="chip" id="trend-clear" hidden></button>
+          </header>
+          <div class="trend" id="trend" role="list"></div>
+          <p class="trend__readout" id="trend-readout" aria-live="polite"></p>
+        </article>
+
+        <article class="card" aria-labelledby="split-title">
+          <header class="card__head">
+            <h2 id="split-title">Répartition des dépenses</h2>
+          </header>
+          <div class="split" id="split">
+            <figure class="donut" id="donut">
+              <svg viewBox="0 0 200 200" aria-hidden="true"><g id="donut-segments" transform="rotate(-90 100 100)"></g></svg>
+              <figcaption class="donut__center" aria-live="polite">
+                <span class="donut__value" id="donut-value"></span>
+                <span class="donut__label" id="donut-label">dépensés</span>
+              </figcaption>
+            </figure>
+            <ul class="split__legend" id="split-legend"></ul>
+          </div>
+          <p class="card__empty" id="split-empty" hidden>Pas encore de dépense ce mois-ci.</p>
+        </article>
+
+        <article class="card" aria-labelledby="merchants-title">
+          <header class="card__head">
+            <h2 id="merchants-title">Principaux commerçants</h2>
+          </header>
+          <ol class="merchants" id="merchants"></ol>
+          <p class="card__empty" id="merchants-empty" hidden>Aucune dépense ce mois-ci.</p>
+        </article>
+
+        <article class="card" aria-labelledby="due-title">
+          <header class="card__head">
+            <h2 id="due-title">Échéances mensualisées</h2>
+          </header>
+          <section class="due__group" id="due-upcoming-group" aria-labelledby="due-upcoming-title" hidden>
+            <h3 id="due-upcoming-title">À venir</h3>
+            <p class="due__hint">Déjà comptées dans le reste à vivre (dépenses déduites, rentrées ajoutées).</p>
+            <ul class="due__list" id="due-upcoming"></ul>
+          </section>
+          <section class="due__group" id="due-missing-group" aria-labelledby="due-missing-title" hidden>
+            <h3 id="due-missing-title">Non retrouvées</h3>
+            <p class="due__hint" id="due-missing-hint"></p>
+            <ul class="due__list" id="due-missing"></ul>
+          </section>
+          <details class="due__more" id="due-passed-group" hidden>
+            <summary id="due-passed-title">Déjà passées ce mois-ci</summary>
+            <p class="due__hint">Retrouvées dans le relevé du mois : elles comptent déjà dans « déjà dépensé » ou dans les revenus.</p>
+            <ul class="due__list" id="due-passed"></ul>
+          </details>
+          <details class="due__more" id="due-skipped-group" hidden>
+            <summary id="due-skipped-title">Ignorées ce mois-ci</summary>
+            <ul class="due__list" id="due-skipped"></ul>
+          </details>
+          <p class="card__empty" id="due-empty" hidden>Aucune échéance. Activez « Mensualiser » (crayon de la liste des opérations) sur une dépense ou une rentrée qui revient chaque mois pour l'anticiper.</p>
+        </article>
+      </div>
+
+      <article class="card ops" id="ops-card" aria-labelledby="ops-title">
+        <header class="card__head card__head--row">
+          <div>
+            <h2 id="ops-title">Opérations du mois</h2>
+            <p class="card__hint" id="ops-hint">Filtrez la liste, ou touchez le crayon pour corriger, mensualiser ou supprimer des opérations.</p>
+          </div>
+          <button type="button" class="icon-btn icon-btn--framed" id="ops-edit" aria-label="Modifier les opérations">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>
+          </button>
+        </header>
+
+        <!-- Filtres de la liste -->
+        <div class="ops-filters" role="search" aria-label="Filtrer les opérations">
+          <label class="ops-filters__search">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+            <span class="visually-hidden">Rechercher</span>
+            <input type="search" id="f-q" placeholder="Rechercher un libellé…" autocomplete="off">
+          </label>
+          <label><span class="visually-hidden">Type</span>
+            <select id="f-type">
+              <option value="">Tous les types</option>
+              <option value="depenses">Dépenses</option>
+              <option value="rentrees">Rentrées</option>
+              <option value="epargne">Épargne</option>
+            </select>
+          </label>
+          <label><span class="visually-hidden">Catégorie</span><select id="f-cat"></select></label>
+          <label id="f-profile-wrap"><span class="visually-hidden">Personne</span><select id="f-profile"></select></label>
+          <label class="check"><input type="checkbox" id="f-recurring"> Mensualisées</label>
+          <button type="button" class="link-btn" id="f-reset" hidden>Effacer les filtres</button>
+        </div>
+
+        <p class="ops__notice" id="ops-notice" role="status" hidden>
+          <span id="ops-notice-text"></span>
+          <button type="button" class="link-btn" id="ops-undo" hidden>Annuler</button>
+        </p>
+        <p class="ops__summary" id="ops-count" aria-live="polite"></p>
+        <ul class="ops__list" id="ops-done"></ul>
+
+        <!-- Mode édition : rien n'est enregistré avant « Valider » -->
+        <footer class="edit-bar" id="ops-edit-bar" hidden>
+          <p class="edit-bar__status" id="ops-edit-status"></p>
+          <label class="check" id="ops-learn-wrap"><input type="checkbox" id="ops-learn" checked> Retenir les nouvelles catégories pour les prochains imports</label>
+          <div class="edit-bar__actions">
+            <button type="button" class="btn btn--ghost btn--small" id="ops-cancel">Annuler</button>
+            <button type="button" class="btn btn--primary btn--small" id="ops-save">Valider</button>
+          </div>
+        </footer>
+      </article>
+    </section>
+
+    <!-- ——— Sauvegarde chiffrée ——— -->
+    <section class="backup" id="view-sauvegarde" data-view="sauvegarde" aria-labelledby="backup-title" hidden>
+      <header class="import__intro">
+        <h1 id="backup-title">Sauvegarde</h1>
+        <p>Vos données restent sur vos appareils. La sauvegarde est chiffrée avec votre mot de passe : sans lui, le fichier est illisible, même s'il passe par iCloud ou AirDrop.</p>
+      </header>
+
+      <article class="card backup-card" aria-labelledby="backup-auto-title">
+        <h2 id="backup-auto-title">Sauvegarde automatique</h2>
+        <p class="backup-status" id="backup-status"></p>
+        <form class="backup-pass" id="backup-pass-form" novalidate>
+          <p class="card__hint" id="backup-pass-hint"></p>
+          <div class="backup-pass__fields">
+            <label class="field"><span>Mot de passe de sauvegarde</span><input type="password" name="pass" autocomplete="new-password" minlength="8" required></label>
+            <label class="field"><span>Confirmez-le</span><input type="password" name="confirm" autocomplete="new-password" required></label>
+          </div>
+          <p class="form-error" id="backup-pass-error" role="alert" hidden></p>
+          <div class="backup-actions">
+            <button type="submit" class="btn btn--primary btn--small" id="backup-pass-submit">Activer la sauvegarde</button>
+            <button type="button" class="btn btn--ghost btn--small" id="backup-pass-cancel" hidden>Annuler</button>
+          </div>
+        </form>
+        <div class="backup-actions" id="backup-tools" hidden>
+          <button type="button" class="btn btn--ghost btn--small" id="backup-now">Sauvegarder maintenant</button>
+          <button type="button" class="link-btn" id="backup-pass-change">Changer le mot de passe</button>
+        </div>
+      </article>
+
+      <article class="card backup-card" id="backup-send-card" aria-labelledby="backup-send-title">
+        <h2 id="backup-send-title">Envoyer sur l'iPhone</h2>
+        <ol class="backup-steps">
+          <li>Envoyez le fichier de sauvegarde par AirDrop sur votre iPhone.</li>
+          <li>Sur l'iPhone, ouvrez Notre Budget (l'app installée sur l'écran d'accueil), onglet « Sauvegarde ».</li>
+          <li>« Choisir le fichier… », puis votre mot de passe de sauvegarde.</li>
+        </ol>
+        <div class="backup-actions">
+          <button type="button" class="btn btn--primary btn--small" id="backup-share">Envoyer par AirDrop…</button>
+          <button type="button" class="btn btn--ghost btn--small" id="backup-download">Télécharger le fichier</button>
+        </div>
+        <p class="card__hint" id="backup-share-hint"></p>
+      </article>
+
+      <article class="card backup-card" aria-labelledby="restore-title">
+        <h2 id="restore-title">Restaurer une sauvegarde</h2>
+        <p class="card__hint">Remplace toutes les données de cet appareil par celles du fichier.</p>
+        <div class="backup-actions">
+          <label class="btn btn--ghost btn--small file-btn">
+            <input type="file" id="restore-file" accept="application/json,.json" class="visually-hidden">
+            Choisir le fichier…
+          </label>
+        </div>
+        <form class="backup-pass" id="restore-form" novalidate hidden>
+          <p class="restore-file-name" id="restore-file-name"></p>
+          <label class="field"><span>Mot de passe de la sauvegarde</span><input type="password" name="pass" autocomplete="current-password" required></label>
+          <p class="form-error" id="restore-error" role="alert" hidden></p>
+          <div class="backup-actions">
+            <button type="submit" class="btn btn--primary btn--small">Ouvrir la sauvegarde</button>
+          </div>
+        </form>
+        <div class="restore-preview" id="restore-preview" hidden>
+          <p id="restore-summary"></p>
+          <div class="backup-actions">
+            <button type="button" class="btn btn--ghost btn--small" id="restore-cancel">Annuler</button>
+            <button type="button" class="btn btn--danger btn--small" id="restore-confirm">Remplacer les données de cet appareil</button>
+          </div>
+        </div>
+        <p class="backup-status" id="restore-status" role="status" hidden></p>
+      </article>
+    </section>
+
+    <!-- ——— Import de relevés ——— -->
+    <section class="import" id="view-importer" data-view="importer" aria-labelledby="import-title" hidden>
+      <header class="import__intro">
+        <h1 id="import-title">Importer un relevé</h1>
+        <p>Déposez vos relevés bancaires en PDF. Ils sont lus sur cet appareil : rien n'est envoyé nulle part.</p>
+      </header>
+
+      <label class="dropzone" id="dropzone">
+        <input class="visually-hidden" type="file" id="pdf-input" accept="application/pdf,.pdf" multiple>
+        <span class="dropzone__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+            <path d="M14 3v5h5"/><path d="M12 17v-6"/><path d="m9 13 3-3 3 3"/>
+          </svg>
+        </span>
+        <span class="dropzone__title">Glissez un relevé PDF ici</span>
+        <span class="dropzone__hint">ou <u>choisissez un fichier</u> · plusieurs à la fois si vous voulez</span>
+        <span class="dropzone__privacy">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+          </svg>
+          Lecture 100 % locale
+        </span>
+      </label>
+
+      <p class="import__status" id="import-status" role="status" hidden></p>
+
+      <!-- Zone tampon : rien n'est enregistré avant « Valider et importer » -->
+      <div class="review" id="review" hidden>
+        <div class="review__toolbar">
+          <div>
+            <h2>On vérifie ensemble ?</h2>
+            <p class="review__source" id="review-source"></p>
+          </div>
+          <div class="review__options">
+            <label class="toggle">
+              <input type="checkbox" id="review-ai-toggle" checked>
+              <span>Affiner avec l'IA locale</span>
+            </label>
+            <label class="field">
+              <span>Ces opérations concernent</span>
+              <select id="review-profile"></select>
+            </label>
+          </div>
+        </div>
+
+        <div class="ai-status" id="review-ai" role="status" hidden>
+          <span class="ai-status__dot" aria-hidden="true"></span>
+          <span class="ai-status__text" id="review-ai-text"></span>
+          <progress class="ai-status__bar" id="review-ai-bar" max="1" value="0" hidden></progress>
+        </div>
+
+        <div class="review__table-wrap">
+          <table class="review__table">
+            <thead>
+              <tr>
+                <th scope="col"><input type="checkbox" id="review-all" aria-label="Tout sélectionner" checked></th>
+                <th scope="col">Date</th>
+                <th scope="col">Libellé</th>
+                <th scope="col">Catégorie</th>
+                <th scope="col">Sens</th>
+                <th scope="col" class="num">Montant (€)</th>
+                <th scope="col">Récurrent</th>
+                <th scope="col"><span class="visually-hidden">Retirer</span></th>
+              </tr>
+            </thead>
+            <tbody id="review-body"></tbody>
+          </table>
+        </div>
+
+        <footer class="review__footer">
+          <dl class="review__totals" id="review-totals"></dl>
+          <div class="review__actions">
+            <button type="button" class="btn btn--ghost" id="review-cancel">Annuler</button>
+            <button type="button" class="btn btn--primary" id="review-submit">Valider et importer</button>
+          </div>
+        </footer>
+      </div>
+    </section>
+
+  </main>
+
+  <template id="review-row-template">
+    <tr class="review-row">
+      <td class="cell-include" data-label="Importer"><input type="checkbox" class="js-include" aria-label="Importer cette opération"></td>
+      <td class="cell-date" data-label="Date"><input type="date" class="js-date" aria-label="Date" required></td>
+      <td class="cell-label" data-label="Libellé">
+        <span class="row-label js-label"></span>
+        <span class="badge js-badge" hidden></span>
+      </td>
+      <td class="cell-category" data-label="Catégorie"><select class="js-category" aria-label="Catégorie"></select></td>
+      <td class="cell-type" data-label="Sens">
+        <select class="js-type" aria-label="Sens">
+          <option value="sortie">Dépense</option>
+          <option value="entree">Rentrée</option>
+        </select>
+      </td>
+      <td class="cell-amount num" data-label="Montant (€)"><input type="text" inputmode="decimal" class="js-amount" aria-label="Montant en euros" autocomplete="off"></td>
+      <td class="cell-recurring" data-label="Récurrent"><input type="checkbox" class="js-recurring" aria-label="Opération récurrente"></td>
+      <td class="cell-remove"><button type="button" class="icon-btn js-remove" aria-label="Retirer cette ligne">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button></td>
+    </tr>
+  </template>
+
+  <template id="op-template">
+    <li class="op">
+      <span class="op__date js-date"></span>
+      <span class="op__icon js-icon" aria-hidden="true"></span>
+      <span class="op__main">
+        <span class="op__name js-name"></span>
+        <span class="op__meta js-meta"></span>
+      </span>
+      <span class="op__amount js-amount"></span>
+    </li>
+  </template>
+
+  <!-- Ligne en mode édition -->
+  <template id="op-edit-template">
+    <li class="op-edit">
+      <label class="op-edit__date"><span class="visually-hidden">Date</span><input type="date" name="date" required></label>
+      <label class="op-edit__name"><span class="visually-hidden">Nom affiché</span><input type="text" name="note" autocomplete="off"></label>
+      <label class="op-edit__cat"><span class="visually-hidden">Catégorie</span><select name="categoryId"></select></label>
+      <label class="op-edit__type"><span class="visually-hidden">Sens</span>
+        <select name="type">
+          <option value="sortie">Dépense</option>
+          <option value="entree">Rentrée</option>
+        </select>
+      </label>
+      <label class="op-edit__profile"><span class="visually-hidden">Personne</span><select name="profile"></select></label>
+      <label class="op-edit__amount"><span class="visually-hidden">Montant en euros</span><input type="text" name="amount" inputmode="decimal" autocomplete="off"></label>
+      <label class="op-edit__recurring check"><input type="checkbox" name="recurring"> <span>Mensualiser</span></label>
+      <button type="button" class="icon-btn op-edit__delete js-delete" aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+      </button>
+    </li>
+  </template>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,37 +1,55 @@
 /* Base : tokens, reset et éléments partagés. */
+
+/* Nunito (SIL Open Font License, voir fonts/OFL-Nunito.txt), servie depuis l'app */
+@font-face {
+  font-family: "Nunito";
+  src: url("../fonts/nunito-latin-var.woff2") format("woff2");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --bg: #FBF6EF;
+  /* Bonbon fintech : fond lilas, violet électrique qui agit, couleurs bonbon qui identifient */
+  --bg: #F4F1FF;            /* lilas pâle */
   --surface: #FFFFFF;
-  --surface-2: #F7F0E8;
-  --border: #E8DDD2;
-  --text: #2B2420;
-  --text-muted: #7A6E66;
-  --accent: #E07A5F;
-  --accent-strong: #B9502F;
-  --accent-soft: #FBEAE3;
-  --accent-line: #EDB9A8;
-  --positive: #3E8657;
-  --positive-soft: #E3F1E7;
-  --positive-field: #CFE7D7;
-  --saved: #3C6E9E; /* épargne du mois : mise de côté, ni dépensée ni libre */
-  --warning: #E9A23B;
-  --warning-soft: #FDF3E1;
-  --warning-ink: #8A5600;
-  --danger: #B0153F;
-  --danger-soft: #FBE3EA;
+  --surface-2: #F1EDFF;     /* rails, survols, sous-zones */
+  --border: #E6E0FA;
+  --text: #1B1530;          /* encre violette */
+  --text-muted: #645C7D;
+  --accent: #8B6DFF;        /* focus, rayé de l'à-venir */
+  --accent-strong: #6C47FF; /* violet électrique : action, sélection */
+  --accent-soft: #ECE6FF;
+  --accent-line: #C6B8FF;
+  --hero: #6C47FF;          /* la seule grande carte pleine : le reste à vivre */
+  --pink: #F0509A;          /* rose bonbon : dépensé, à venir */
+  --pink-soft: #FFE3F0;
+  --positive: #0E8A43;      /* gains, rentrées, « dans l'enveloppe » */
+  --positive-soft: #DDF7E8;
+  --positive-field: #FFFFFF; /* la partie libre du mois */
+  --saved: #0FA89A;         /* turquoise : épargne */
+  --warning: #F59E0B;       /* mangue : bientôt atteint */
+  --warning-soft: #FFF1D6;
+  --warning-ink: #8A5300;
+  --danger: #D7263D;        /* rouge : pertes et dépassements */
+  --danger-soft: #FFE1E5;
 
-  /* Répartition (anneau) : 5 teintes validées daltonisme + gris « Autres » */
-  --series-1: #2A78D6;
-  --series-2: #EB6834;
-  --series-3: #1BAF7A;
-  --series-4: #EDA100;
-  --series-5: #E87BA4;
-  --series-other: #B5ABA2;
-  --shadow: 0 1px 2px rgb(60 40 30 / 0.06), 0 8px 28px rgb(60 40 30 / 0.07);
-  --shadow-sm: 0 1px 2px rgb(60 40 30 / 0.08), 0 3px 10px rgb(60 40 30 / 0.06);
+  /* Pastilles bonbon : catégories et livrets (validées daltonisme, légende toujours écrite) */
+  --series-1: #6C47FF;
+  --series-2: #F0509A;
+  --series-3: #E89A10;
+  --series-4: #2F7BEA;
+  --series-5: #0FA89A;
+  --series-other: #C9C2DD;
+  --shadow: 0 1px 2px rgb(44 22 120 / 0.06), 0 10px 30px rgb(76 46 190 / 0.10);
+  --shadow-sm: 0 1px 2px rgb(44 22 120 / 0.08), 0 4px 12px rgb(76 46 190 / 0.08);
 
-  --radius: 18px;
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
+  --radius: 20px;
+  --r-control: 999px;       /* boutons, onglets, segments : des pilules */
+  --r-input: 12px;
+  --r-mark: 999px;          /* rails */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-display: "Nunito", var(--font);
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -41,32 +59,36 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1F1B18;
-    --surface: #2A2521;
-    --surface-2: #332D28;
-    --border: #463E37;
-    --text: #F4ECE4;
-    --text-muted: #B3A79D;
-    --accent: #EE8E72;
-    --accent-strong: #F2A089;
-    --accent-soft: #3A2A24;
-    --accent-line: #7A4A3B;
-    --positive: #7CC495;
-    --positive-soft: #24352A;
-    --positive-field: #2E4A37;
-    --saved: #6F9FCC;
-    --warning-soft: #3B3122;
-    --warning-ink: #F2BE6B;
-    --danger: #FF7A9A;
-    --danger-soft: #3E2229;
-    --series-1: #3987E5;
-    --series-2: #D95926;
-    --series-3: #199E70;
-    --series-4: #C98500;
-    --series-5: #D55181;
-    --series-other: #6E655E;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 28px rgb(0 0 0 / 0.25);
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 3px 10px rgb(0 0 0 / 0.2);
+    --bg: #120E22;
+    --surface: #1C1733;
+    --surface-2: #251F42;
+    --border: #342C57;
+    --text: #F3F0FF;
+    --text-muted: #B4AACF;
+    --accent: #A48BFF;
+    --accent-strong: #9B82FF;
+    --accent-soft: #2C2452;
+    --accent-line: #5B4A9E;
+    --hero: #4F33D1;
+    --pink: #FF6FAE;
+    --pink-soft: #3D1B33;
+    --positive: #3DD68C;
+    --positive-soft: #163A2A;
+    --positive-field: #F3F0FF;
+    --saved: #22C1B1;
+    --warning: #FFB020;
+    --warning-soft: #3A2A10;
+    --warning-ink: #FFC266;
+    --danger: #FF6B7A;
+    --danger-soft: #3D1A22;
+    --series-1: #8B6DFF;
+    --series-2: #E2508F;
+    --series-3: #C0821A;
+    --series-4: #4A8DF0;
+    --series-5: #139C8E;
+    --series-other: #4B4368;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 30px rgb(0 0 0 / 0.35);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
   }
 }
 
@@ -113,7 +135,7 @@ select {
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-input);
   padding: 7px 10px;
   min-height: 40px;
   min-width: 0;
@@ -136,7 +158,7 @@ input[aria-invalid="true"] {
   font: inherit;
   font-weight: 600;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-control);
   padding: 11px 22px;
   min-height: 44px;
   cursor: pointer;
@@ -146,16 +168,20 @@ input[aria-invalid="true"] {
 .btn:active:not(:disabled) { transform: scale(0.97); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-.btn--primary { background: var(--accent-strong); color: #FFFFFF; }
-.btn--ghost { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
-.btn--ghost:hover { background: var(--surface-2); }
+.btn--primary { background: var(--accent-strong); color: #FFFFFF; box-shadow: 0 6px 16px rgb(108 71 255 / 0.28); }
+.btn--primary:hover:not(:disabled) { background: #5A35F0; }
+.btn--ghost { background: var(--surface); color: var(--accent-strong); box-shadow: inset 0 0 0 1.5px var(--accent-line); }
+.btn--ghost:hover { background: var(--accent-soft); }
 .btn--small { padding: 6px 14px; min-height: 34px; font-size: 0.88rem; }
 a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 
-::selection { background: var(--accent-soft); color: var(--text); }
+::selection { background: var(--accent-line); color: var(--text); }
+
+html { scrollbar-color: var(--border) transparent; caret-color: var(--accent-strong); }
 
 @media (prefers-color-scheme: dark) {
-  .btn--primary { color: #2B1A14; }
+  .btn--primary { color: #120E22; box-shadow: none; }
+  .btn--primary:hover:not(:disabled) { background: #B3A0FF; }
 }
 
 .icon-btn {
@@ -175,3 +201,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* Titres et gros chiffres en Nunito, arrondie et pétillante ; le texte reste en police système */
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.01em; }
+strong, b { font-weight: 700; }

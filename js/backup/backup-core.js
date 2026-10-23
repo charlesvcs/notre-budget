@@ -10,14 +10,15 @@
  */
 import { DATA_WRITTEN, exportAll, getSetting, importAll, setSetting } from '../db/database.js';
 
-export const BACKUP_FORMAT = 'notre-budget-chiffre';
-export const BACKUP_FILENAME = 'notre-budget-sauvegarde.json';
+export const BACKUP_FORMAT = 'mon-budget-chiffre';
+const LEGACY_BACKUP_FORMAT = 'notre-budget-chiffre';
+export const BACKUP_FILENAME = 'mon-budget-sauvegarde.json';
 const ITERATIONS = 600_000;
 const ENDPOINT = './api/sauvegarde';
 const DEBOUNCE_MS = 2500;
 
 /** Émis quand l'état de la sauvegarde change (pour l'écran « Sauvegarde »). */
-export const BACKUP_STATUS = 'notre-budget:sauvegarde';
+export const BACKUP_STATUS = 'mon-budget:sauvegarde';
 const emitStatus = () => window.dispatchEvent(new CustomEvent(BACKUP_STATUS));
 
 // ——— Chiffrement ————————————————————————————————————————————————
@@ -70,7 +71,9 @@ export async function createBackup() {
 
 /** Fichier chiffré + mot de passe → contenu de la base (lève une erreur si le mot de passe est faux). */
 export async function openBackup(file, passphrase) {
-  if (file?.format !== BACKUP_FORMAT) throw new Error('Ce fichier n\'est pas une sauvegarde de Notre Budget.');
+  if (file?.format !== BACKUP_FORMAT && file?.format !== LEGACY_BACKUP_FORMAT) {
+    throw new Error('Ce fichier n\'est pas une sauvegarde de Mon Budget.');
+  }
   const key = await deriveKey(passphrase, unb64(file.kdf.salt));
   let plain;
   try {

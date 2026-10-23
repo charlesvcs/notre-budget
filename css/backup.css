@@ -14,14 +14,14 @@
 .backup-status {
   margin: 0;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--surface-2);
   font-size: 0.95rem;
   overflow-wrap: anywhere;
 }
 
 .backup-status[data-tone="ok"] { background: var(--positive-soft); }
-.backup-status[data-tone="warning"] { background: var(--warning-soft); color: var(--warning-ink); font-weight: 600; }
+.backup-status[data-tone="warning"] { background: var(--warning-soft); color: var(--warning-ink); }
 .backup-status[data-tone="error"] { background: var(--danger-soft); color: var(--danger); font-weight: 600; }
 
 .backup-pass { display: grid; gap: 12px; }
@@ -35,7 +35,7 @@
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-input);
 }
 
 .backup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
@@ -62,11 +62,11 @@
   gap: 4px 14px;
   margin: 0;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--warning-soft);
   color: var(--warning-ink);
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 @media (max-width: 560px) {

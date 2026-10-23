@@ -2,14 +2,13 @@
  * Écran d'import : dépôt de PDF → extraction → tableau de validation → base.
  * Rien n'est écrit dans IndexedDB avant le clic sur « Valider et importer ».
  */
-import { PROFILES, TRANSACTION_TYPES } from '../db/schema.js';
+import { TRANSACTION_TYPES } from '../db/schema.js';
 import {
-  DATA_CHANGED, getCategories, getRules, getSetting, getTransactionsByMonth,
-  notifyDataChanged, saveRules, saveTransactions, setSetting, toCents,
+  DATA_CHANGED, getActiveProfiles, getCategories, getProfileNames, getRules, getTransactionsByMonth,
+  notifyDataChanged, saveRules, saveTransactions, toCents,
 } from '../db/database.js';
 import { parseStatement } from './statement-parser.js';
 import { createCategorizer, merchantKey, normalizeLabel } from './categorizer.js';
-import { AI_CONFIDENT } from './ai/ai-shared.js';
 
 const euro = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 const toInputAmount = (cents) =>
@@ -33,10 +32,6 @@ export function mountImportView(root = document) {
     cancel: $('review-cancel'),
     submit: $('review-submit'),
     template: $('review-row-template'),
-    aiToggle: $('review-ai-toggle'),
-    ai: $('review-ai'),
-    aiText: $('review-ai-text'),
-    aiBar: $('review-ai-bar'),
   };
 
   let rows = [];
@@ -44,9 +39,6 @@ export function mountImportView(root = document) {
   let categories = [];
   let categorizer = null;
   let busy = false;
-  let aiEnabled = true;
-  let aiRun = 0; // incrémenté à chaque analyse : les réponses d'une analyse périmée sont ignorées
-  let aiClient = null; // module chargé à la première utilisation de l'IA
 
   // ——— Données de référence ——————————————————————————————————————
 
@@ -56,17 +48,29 @@ export function mountImportView(root = document) {
   }
 
   async function fillProfiles() {
-    const names = (await getSetting('profileNames')) ?? {};
-    // Pas de choix par défaut : chaque relevé doit être attribué explicitement
-    const current = el.profile.value;
-    el.profile.replaceChildren(new Option('À qui est ce relevé ?', '', false, !current),
-      ...Object.values(PROFILES).map((value) => new Option(names[value] ?? value, value, false, value === current)));
-    el.profile.options[0].disabled = true;
+    const [names, active] = await Promise.all([getProfileNames(), getActiveProfiles()]);
+    const wrap = el.profile.closest('label');
+    if (active.length <= 1) {
+      const only = active[0];
+      el.profile.replaceChildren(new Option(names[only] ?? only, only, true, true));
+      el.profile.value = only;
+      if (wrap) wrap.hidden = true;
+    } else {
+      // Plusieurs profils actifs : chaque relevé est attribué explicitement
+      const current = active.includes(el.profile.value) ? el.profile.value : '';
+      el.profile.replaceChildren(
+        new Option('À qui est ce relevé ?', '', false, !current),
+        ...active.map((value) => new Option(names[value] ?? value, value, false, value === current)),
+      );
+      el.profile.options[0].disabled = true;
+      if (wrap) wrap.hidden = false;
+    }
+    updateSummary();
   }
 
   el.profile.addEventListener('change', () => updateSummary());
 
-  // Noms des personnes modifiés depuis le tableau de bord
+  // Profils ou noms modifiés depuis le tableau de bord
   window.addEventListener(DATA_CHANGED, fillProfiles);
 
   // ——— Dépôt de fichiers ——————————————————————————————————————————
@@ -136,7 +140,6 @@ export function mountImportView(root = document) {
       await flagDuplicates(added);
       rows = rows.concat(added).sort((a, b) => a.date.localeCompare(b.date));
       render();
-      refineWithAI(added); // en arrière-plan : le tableau reste utilisable
 
       const dupes = added.filter((r) => r.duplicate).length;
       const summary = added.length
@@ -165,103 +168,6 @@ export function mountImportView(root = document) {
     return `Impossible de lire « ${name} ».`;
   }
 
-  // ——— IA locale ————————————————————————————————————————————————
-
-  /** Les opérations que les mots-clés et vos règles n'ont pas su classer. */
-  const needsAI = (r) => r.categorySource === 'defaut' && !r.categoryTouched && !r.duplicate;
-
-  async function refineWithAI(candidates) {
-    const run = ++aiRun;
-    const todo = candidates.filter(needsAI);
-    if (!aiEnabled || !todo.length) {
-      if (!todo.length && aiEnabled && candidates.length) setAIStatus('done', 'Toutes les opérations ont été reconnues sans l\'IA.');
-      return;
-    }
-
-    todo.forEach((r) => { r.aiPending = true; refreshRow(r); });
-    setAIStatus('busy', 'Démarrage de l\'IA locale…');
-    let device = null;
-    let model = null;
-
-    try {
-      aiClient ??= await import('./ai/ai-client.js');
-      await aiClient.classifyWithAI(todo, categories, {
-        onProgress: (loaded, total) => {
-          if (run !== aiRun) return;
-          setAIStatus('busy', `Chargement du modèle en mémoire… ${Math.round((100 * loaded) / total)} %`, loaded / total);
-        },
-        onReady: (d, m) => {
-          device = d;
-          model = m;
-          if (run === aiRun) setAIStatus('busy', `L'IA analyse ${todo.length} opération${todo.length > 1 ? 's' : ''}…`, 0);
-        },
-        onResult: ({ uid, categoryId, confidence, done, total }) => {
-          if (run !== aiRun) return;
-          const row = rows.find((r) => r.uid === uid);
-          if (row) {
-            row.aiPending = false;
-            if (categoryId && aiEnabled && needsAI(row)) {
-              Object.assign(row, { categoryId, suggestedCategoryId: categoryId, categorySource: 'ia', aiConfidence: confidence });
-              row.recurring ||= categoryId === 'abonnements';
-            }
-            refreshRow(row);
-          }
-          setAIStatus('busy', `L'IA analyse les opérations… ${done} / ${total}`, done / total);
-        },
-      });
-      if (run !== aiRun) return;
-      const suggested = todo.filter((r) => r.categorySource === 'ia');
-      const n = suggested.length;
-      const unsure = suggested.filter(isUnsure).length;
-      const where = `${/4B/.test(model) ? 'grand modèle' : 'modèle léger'}, ${device === 'webgpu' ? 'carte graphique' : 'processeur'}, sans connexion`;
-      setAIStatus('done', `IA locale : ${n} catégorie${n > 1 ? 's' : ''} suggérée${n > 1 ? 's' : ''} (${where}).`
-        + (unsure ? ` Elle hésite sur ${unsure} d'entre elles : vérifiez en priorité les lignes « IA hésitante ».` : ' Jetez un œil aux lignes « Suggéré par l\'IA ».'));
-    } catch (err) {
-      console.error('[ia]', err);
-      if (run !== aiRun) return;
-      setAIStatus('error', /not found|404|Could not locate/i.test(err.message)
-        ? 'IA locale indisponible : le modèle n\'est pas installé (voir README).'
-        : 'L\'IA locale n\'a pas pu démarrer. Les catégories par mots-clés restent utilisables.');
-    } finally {
-      todo.forEach((r) => { if (r.aiPending) { r.aiPending = false; refreshRow(r); } });
-    }
-  }
-
-  const isUnsure = (r) => r.aiConfidence != null && r.aiConfidence < AI_CONFIDENT;
-
-  function stopAI() {
-    aiRun++;
-    aiClient?.cancelAI();
-    setAIStatus(null);
-  }
-
-  function setAIStatus(state, text, progress = null) {
-    el.ai.hidden = !state;
-    el.ai.dataset.state = state ?? '';
-    el.aiText.textContent = text ?? '';
-    el.aiBar.hidden = progress == null;
-    if (progress != null) el.aiBar.value = progress;
-  }
-
-  el.aiToggle.addEventListener('change', () => {
-    aiEnabled = el.aiToggle.checked;
-    setSetting('aiEnabled', aiEnabled);
-    if (aiEnabled) {
-      refineWithAI(rows);
-    } else {
-      stopAI();
-      // Retour aux catégories par mots-clés pour les suggestions de l'IA non retouchées
-      for (const r of rows) {
-        r.aiPending = false;
-        if (r.categorySource === 'ia' && !r.categoryTouched) {
-          const s = categorizer.suggest(r.label, r.type);
-          Object.assign(r, { categoryId: s.categoryId, suggestedCategoryId: s.categoryId, categorySource: s.source });
-        }
-      }
-      render();
-    }
-  });
-
   // ——— Lignes de la zone tampon ——————————————————————————————————
 
   function toRow(t, source) {
@@ -284,7 +190,6 @@ export function mountImportView(root = document) {
       duplicate: false,
       // À vérifier : sens deviné, ou aucune catégorie trouvée
       needsReview: t.confidence !== 'haute' || s.source === 'defaut',
-      aiPending: false,
     };
   }
 
@@ -349,16 +254,6 @@ export function mountImportView(root = document) {
     return tr;
   }
 
-  /** Met à jour la ligne affichée après une suggestion de l'IA. */
-  function refreshRow(row) {
-    const tr = el.body.querySelector(`tr[data-uid="${row.uid}"]`);
-    if (!tr) return;
-    const select = tr.querySelector('.js-category');
-    if (select.value !== row.categoryId) select.value = row.categoryId;
-    tr.querySelector('.js-recurring').checked = row.recurring;
-    syncRowState(tr, row);
-  }
-
   function syncRowState(tr, row) {
     tr.dataset.type = row.type;
     tr.classList.toggle('is-excluded', !row.include);
@@ -367,11 +262,9 @@ export function mountImportView(root = document) {
     const badge = tr.querySelector('.js-badge');
     const untouched = !row.categoryTouched;
     const [kind, text] = row.duplicate ? ['duplicate', 'Déjà importée']
-      : row.aiPending ? ['ai-pending', 'L\'IA réfléchit…']
-        : row.categorySource === 'ia' && untouched ? (isUnsure(row) ? ['ai-unsure', 'IA hésitante · à vérifier'] : ['ai', 'Suggéré par l\'IA'])
-          : row.needsReview ? ['review', 'À vérifier']
-            : row.categorySource === 'appris' && untouched ? ['learned', 'Retenu de vos choix']
-              : [null, ''];
+      : row.needsReview ? ['review', 'À vérifier']
+        : row.categorySource === 'appris' && untouched ? ['learned', 'Retenu de vos choix']
+          : [null, ''];
     badge.hidden = !kind;
     badge.dataset.kind = kind ?? '';
     badge.textContent = text;
@@ -551,8 +444,7 @@ export function mountImportView(root = document) {
   function reset() {
     rows = [];
     sources = [];
-    el.profile.value = '';
-    stopAI();
+    if (el.profile.options.length > 1) el.profile.value = '';
     render();
   }
 
@@ -569,11 +461,6 @@ export function mountImportView(root = document) {
     el.status.dataset.tone = tone;
   }
 
-  getSetting('aiEnabled').then((v) => {
-    // Par défaut, pas d'IA sur téléphone : le modèle (plusieurs Go) n'y tiendrait pas
-    aiEnabled = v ?? !matchMedia('(pointer: coarse)').matches;
-    el.aiToggle.checked = aiEnabled;
-  });
   fillProfiles();
   render();
 }

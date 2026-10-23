@@ -3,17 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Notre Budget</title>
-  <meta name="description" content="Notre budget à deux, 100 % local.">
+  <title>Mon Budget</title>
+  <meta name="description" content="Suivi de budget et d'épargne, 100 % local.">
 
-  <!-- Aucune ressource externe : tout est servi depuis l'app -->
+  <!-- Tout est servi depuis l'app ; seules exceptions : la lecture de séries publiques
+       (INSEE, BCE, Caisse des Dépôts), sans aucune donnée personnelle envoyée -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'">
+        content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://api.insee.fr https://data-api.ecb.europa.eu https://opendata.caissedesdepots.fr; worker-src 'self'; object-src 'none'; base-uri 'self'">
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#FBF6EF" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1F1B18" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F4F1FF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#120E22" media="(prefers-color-scheme: dark)">
 
   <!-- iOS -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,15 +28,17 @@
   <link rel="stylesheet" href="css/dashboard.css">
   <link rel="stylesheet" href="css/import.css">
   <link rel="stylesheet" href="css/backup.css">
+  <link rel="stylesheet" href="css/epargne.css">
 </head>
 <body>
   <header class="app-bar">
     <a class="app-bar__brand" href="#/mois">
       <img src="icons/icon.svg" width="28" height="28" alt="">
-      <span>Notre Budget</span>
+      <span>Mon Budget</span>
     </a>
     <nav class="app-bar__nav" aria-label="Sections">
       <a href="#/mois" data-route="mois">Le mois</a>
+      <a href="#/epargne" data-route="epargne">Épargne</a>
       <a href="#/importer" data-route="importer">Importer</a>
       <a href="#/sauvegarde" data-route="sauvegarde">Sauvegarde</a>
     </nav>
@@ -153,6 +156,7 @@
         <article class="card" aria-labelledby="split-title">
           <header class="card__head">
             <h2 id="split-title">Répartition des dépenses</h2>
+            <p class="card__hint" id="split-hint"></p>
           </header>
           <div class="split" id="split">
             <figure class="donut" id="donut">
@@ -229,7 +233,7 @@
             </select>
           </label>
           <label><span class="visually-hidden">Catégorie</span><select id="f-cat"></select></label>
-          <label id="f-profile-wrap"><span class="visually-hidden">Personne</span><select id="f-profile"></select></label>
+          <label id="f-profile-wrap"><span class="visually-hidden">Profil</span><select id="f-profile"></select></label>
           <label class="check"><input type="checkbox" id="f-recurring"> Mensualisées</label>
           <button type="button" class="link-btn" id="f-reset" hidden>Effacer les filtres</button>
         </div>
@@ -250,6 +254,132 @@
             <button type="button" class="btn btn--primary btn--small" id="ops-save">Valider</button>
           </div>
         </footer>
+      </article>
+    </section>
+
+    <!-- ——— Épargne : livrets réglementés ——— -->
+    <section class="savings" id="view-epargne" data-view="epargne" aria-labelledby="sv-title" hidden>
+      <header class="savings__head">
+        <div>
+          <h1 id="sv-title">Épargne</h1>
+          <p class="savings__lede">Vos livrets, leurs intérêts, et ce qu'ils valent vraiment une fois l'inflation passée.</p>
+        </div>
+        <div class="savings__actions">
+          <button type="button" class="btn btn--ghost btn--small" id="sv-export" hidden>Exporter en Excel</button>
+          <button type="button" class="btn btn--ghost btn--small" id="sv-add" hidden>Ajouter un livret</button>
+        </div>
+      </header>
+
+      <p class="ops__notice" id="sv-notice" role="status" hidden>
+        <span id="sv-notice-text"></span>
+        <button type="button" class="link-btn" id="sv-undo" hidden>Annuler</button>
+      </p>
+
+      <!-- Premier lancement, ou ajout d'un livret -->
+      <article class="card sv-setup" id="sv-setup" aria-labelledby="sv-setup-title" hidden>
+        <header class="card__head">
+          <h2 id="sv-setup-title">Suivre vos livrets</h2>
+          <p class="card__hint">Indiquez le solde que votre banque affiche aujourd'hui. L'app retrouve ensuite les virements dans vos relevés et calcule les intérêts, quinzaine par quinzaine.</p>
+          <p class="card__hint" id="sv-setup-found"></p>
+        </header>
+        <form class="sv-setup__form" id="sv-setup-form" novalidate>
+          <div class="sv-setup__rows" id="sv-setup-rows"></div>
+          <p class="form-error" id="sv-setup-error" role="alert" hidden></p>
+          <div class="sv-actions">
+            <button type="button" class="link-btn" id="sv-setup-more">Ajouter un autre livret</button>
+            <span class="sv-actions__end">
+              <button type="button" class="btn btn--ghost btn--small" id="sv-setup-cancel" hidden>Annuler</button>
+              <button type="submit" class="btn btn--primary btn--small">Commencer le suivi</button>
+            </span>
+          </div>
+        </form>
+      </article>
+
+      <!-- Vue d'ensemble : taux des livrets face à l'inflation -->
+      <article class="card sv-hero" id="sv-hero" aria-labelledby="sv-hero-title" hidden>
+        <div class="hero__head">
+          <h2 id="sv-hero-title">Vos livrets face à l'inflation</h2>
+          <p class="hero__note" id="sv-hero-note"></p>
+        </div>
+        <div class="sv-ledger__wrap"><table class="sv-ledger" id="sv-ledger"></table></div>
+        <p class="sv-verdict" id="sv-verdict"></p>
+        <p class="card__hint" id="sv-verdict-note"></p>
+      </article>
+
+      <div class="sv-grid" id="sv-livrets"></div>
+
+      <article class="card" id="sv-unmatched-card" aria-labelledby="sv-unmatched-title" hidden>
+        <header class="card__head">
+          <h2 id="sv-unmatched-title">Virements d'épargne à rattacher</h2>
+          <p class="card__hint">Ces virements vers l'épargne ne mentionnent pas clairement un de vos livrets. Indiquez où ils sont allés : l'app s'en souviendra. Vous pouvez aussi le faire depuis « Le mois », avec le crayon de la liste des opérations.</p>
+        </header>
+        <ul class="sv-moves" id="sv-unmatched"></ul>
+      </article>
+
+      <!-- Tableau de bord : widgets choisis et ordonnés par vous -->
+      <section class="sv-board" id="sv-board" aria-labelledby="sv-board-title" hidden>
+        <header class="sv-board__head">
+          <div>
+            <h2 id="sv-board-title">Tableau de bord</h2>
+            <p class="card__hint">Des indicateurs pour juger vos livrets. Choisissez ceux qui vous parlent avec « Personnaliser ».</p>
+          </div>
+          <button type="button" class="btn btn--ghost btn--small" id="sv-board-edit">Personnaliser</button>
+        </header>
+        <div class="sv-widgets" id="sv-widgets"></div>
+        <article class="card sv-catalog" id="sv-catalog" aria-labelledby="sv-catalog-title" hidden>
+          <h3 id="sv-catalog-title">Ajouter un widget</h3>
+          <ul class="sv-catalog__list" id="sv-catalog-list"></ul>
+        </article>
+        <footer class="sv-board-bar" id="sv-board-bar" hidden>
+          <p class="edit-bar__status" id="sv-board-status"></p>
+          <div class="edit-bar__actions">
+            <button type="button" class="btn btn--ghost btn--small" id="sv-board-cancel">Annuler</button>
+            <button type="button" class="btn btn--primary btn--small" id="sv-board-save">Valider</button>
+          </div>
+        </footer>
+      </section>
+
+      <article class="card" id="sv-params-card" aria-labelledby="sv-params-title" hidden>
+        <header class="card__head">
+          <h2 id="sv-params-title">Taux et inflation</h2>
+          <p class="card__hint">Ces valeurs se mettent à jour toutes seules depuis les sources officielles. Une valeur saisie à la main l'emporte tant qu'elle est la plus récente.</p>
+        </header>
+        <section class="sv-live" aria-labelledby="sv-live-title">
+          <h3 id="sv-live-title" class="visually-hidden">Données publiques</h3>
+          <p class="sv-live__status" id="sv-live-status" role="status"></p>
+          <ul class="sv-live__list" id="sv-live-list"></ul>
+          <div class="sv-actions">
+            <label class="check"><input type="checkbox" id="sv-live-auto"> Mettre à jour automatiquement</label>
+            <span class="sv-actions__end"><button type="button" class="btn btn--ghost btn--small" id="sv-live-refresh">Actualiser maintenant</button></span>
+          </div>
+        </section>
+        <form class="sv-inline-form" id="sv-inflation-form" novalidate>
+          <label class="field"><span>Inflation sur un an (%)</span><input type="text" name="rate" inputmode="decimal" autocomplete="off" required></label>
+          <label class="field"><span>Mesurée en</span><select name="month"></select></label>
+          <button type="submit" class="btn btn--ghost btn--small">Enregistrer</button>
+          <p class="form-error" id="sv-inflation-error" role="alert" hidden></p>
+        </form>
+        <div class="sv-rate-table__wrap">
+          <table class="sv-rate-table">
+            <caption class="visually-hidden">Taux nets des livrets, par date d'effet</caption>
+            <thead>
+              <tr><th scope="col">Depuis le</th><th scope="col" class="num">Livret A</th><th scope="col" class="num">LEP</th><th scope="col"><span class="visually-hidden">Origine</span></th></tr>
+            </thead>
+            <tbody id="sv-rate-body"></tbody>
+          </table>
+        </div>
+        <button type="button" class="link-btn sv-rate-more" id="sv-rate-more"></button>
+        <details class="due__more sv-rate-add">
+          <summary>Ajouter un taux</summary>
+          <p class="due__hint">Une date future vaut hypothèse : la projection l'utilisera à partir de cette date.</p>
+          <form class="sv-inline-form" id="sv-rate-form" novalidate>
+            <label class="field"><span>À partir du</span><input type="date" name="from" required></label>
+            <label class="field"><span>Livret A (%)</span><input type="text" name="livretA" inputmode="decimal" autocomplete="off"></label>
+            <label class="field"><span>LEP (%)</span><input type="text" name="lep" inputmode="decimal" autocomplete="off"></label>
+            <button type="submit" class="btn btn--ghost btn--small">Ajouter</button>
+            <p class="form-error" id="sv-rate-error" role="alert" hidden></p>
+          </form>
+        </details>
       </article>
     </section>
 
@@ -285,7 +415,7 @@
         <h2 id="backup-send-title">Envoyer sur l'iPhone</h2>
         <ol class="backup-steps">
           <li>Envoyez le fichier de sauvegarde par AirDrop sur votre iPhone.</li>
-          <li>Sur l'iPhone, ouvrez Notre Budget (l'app installée sur l'écran d'accueil), onglet « Sauvegarde ».</li>
+          <li>Sur l'iPhone, ouvrez Mon Budget (l'app installée sur l'écran d'accueil), onglet « Sauvegarde ».</li>
           <li>« Choisir le fichier… », puis votre mot de passe de sauvegarde.</li>
         </ol>
         <div class="backup-actions">
@@ -357,22 +487,10 @@
             <h2>On vérifie ensemble ?</h2>
             <p class="review__source" id="review-source"></p>
           </div>
-          <div class="review__options">
-            <label class="toggle">
-              <input type="checkbox" id="review-ai-toggle" checked>
-              <span>Affiner avec l'IA locale</span>
-            </label>
-            <label class="field">
-              <span>Ces opérations concernent</span>
-              <select id="review-profile"></select>
-            </label>
-          </div>
-        </div>
-
-        <div class="ai-status" id="review-ai" role="status" hidden>
-          <span class="ai-status__dot" aria-hidden="true"></span>
-          <span class="ai-status__text" id="review-ai-text"></span>
-          <progress class="ai-status__bar" id="review-ai-bar" max="1" value="0" hidden></progress>
+          <label class="field">
+            <span>Ces opérations concernent</span>
+            <select id="review-profile"></select>
+          </label>
         </div>
 
         <div class="review__table-wrap">
@@ -452,13 +570,91 @@
           <option value="entree">Rentrée</option>
         </select>
       </label>
-      <label class="op-edit__profile"><span class="visually-hidden">Personne</span><select name="profile"></select></label>
+      <label class="op-edit__profile"><span class="visually-hidden">Profil</span><select name="profile"></select></label>
       <label class="op-edit__amount"><span class="visually-hidden">Montant en euros</span><input type="text" name="amount" inputmode="decimal" autocomplete="off"></label>
       <label class="op-edit__recurring check"><input type="checkbox" name="recurring"> <span>Mensualiser</span></label>
       <button type="button" class="icon-btn op-edit__delete js-delete" aria-pressed="false">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
       </button>
+      <!-- Épargne : vers quel livret (écran « Épargne ») -->
+      <label class="op-edit__dest" hidden><span aria-hidden="true">Vers</span><select name="destination"></select></label>
     </li>
+  </template>
+
+  <!-- Une carte par livret (écran « Épargne ») -->
+  <template id="sv-livret-template">
+    <article class="card sv-livret">
+      <header class="sv-livret__head">
+        <div>
+          <h2 class="js-name"></h2>
+          <p class="card__hint js-owner"></p>
+        </div>
+        <p class="sv-livret__rate"><strong class="js-rate"></strong><small class="js-rate-note"></small></p>
+      </header>
+      <p class="sv-livret__balance"><span class="js-balance"></span><small class="js-balance-note"></small></p>
+      <div class="sv-cap">
+        <div class="meter"><span class="meter__fill js-cap-fill"></span></div>
+        <p class="env__line"><span class="js-cap-text"></span><span class="env__figures js-cap-figures"></span></p>
+      </div>
+      <dl class="sv-stats">
+        <div><dt class="js-interest-title"></dt><dd class="js-interest"></dd><small class="js-interest-note"></small></div>
+        <div><dt>Face à l'inflation</dt><dd class="js-real"></dd><small>rendement réel par an</small></div>
+        <div><dt>Versement prévu</dt><dd class="js-plan"></dd><small class="js-plan-note"></small></div>
+      </dl>
+      <div class="sv-calc">
+        <p class="sv-calc__title">Sur 12 mois, en comptant l'inflation</p>
+        <dl class="sv-calc__rows">
+          <div><dt class="js-calc-interest-label"></dt><dd class="js-calc-interest"></dd></div>
+          <div><dt class="js-calc-erosion-label"></dt><dd class="js-calc-erosion"></dd></div>
+          <div class="is-total"><dt>Ce que vous gagnez vraiment</dt><dd class="js-calc-gain"></dd></div>
+        </dl>
+        <p class="sv-calc__note js-calc-note"></p>
+      </div>
+      <p class="sv-warning js-warning" hidden></p>
+      <details class="due__more sv-livret__moves">
+        <summary class="js-moves-title"></summary>
+        <ul class="sv-moves js-moves"></ul>
+      </details>
+      <form class="sv-edit js-edit" novalidate hidden>
+        <div class="sv-edit__fields">
+          <label class="field"><span>Solde affiché par la banque (€)</span><input type="text" name="balance" inputmode="decimal" autocomplete="off" required></label>
+          <label class="field"><span>À la date du</span><input type="date" name="date" required></label>
+          <label class="field"><span>Versement mensuel prévu (€)</span><input type="text" name="plan" inputmode="decimal" autocomplete="off" placeholder="d'après les relevés"></label>
+          <label class="field"><span>Titulaire</span><select name="profile"></select></label>
+          <label class="field sv-edit__wide"><span>Mots qui désignent ce livret dans les virements (séparés par des virgules)</span><input type="text" name="keywords" autocomplete="off"></label>
+        </div>
+        <p class="form-error js-edit-error" role="alert" hidden></p>
+        <div class="sv-actions">
+          <button type="button" class="link-btn sv-danger-link js-delete">Ne plus suivre ce livret</button>
+          <span class="sv-actions__end">
+            <button type="button" class="btn btn--ghost btn--small js-cancel">Annuler</button>
+            <button type="submit" class="btn btn--primary btn--small">Enregistrer</button>
+          </span>
+        </div>
+      </form>
+      <div class="sv-actions js-tools">
+        <button type="button" class="btn btn--ghost btn--small js-edit-btn">Mettre à jour le solde</button>
+      </div>
+    </article>
+  </template>
+
+  <!-- Ligne du formulaire « Suivre vos livrets » -->
+  <template id="sv-setup-row-template">
+    <fieldset class="sv-setup__row">
+      <legend class="visually-hidden">Livret</legend>
+      <label class="field"><span>Livret</span>
+        <select name="product">
+          <option value="livretA">Livret A</option>
+          <option value="lep">LEP</option>
+        </select>
+      </label>
+      <label class="field"><span>Titulaire</span><select name="profile"></select></label>
+      <label class="field"><span>Solde aujourd'hui (€)</span><input type="text" name="balance" inputmode="decimal" autocomplete="off" required></label>
+      <label class="field"><span>À la date du</span><input type="date" name="date" required></label>
+      <button type="button" class="icon-btn js-remove" aria-label="Retirer cette ligne">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </fieldset>
   </template>
 
   <script type="module" src="js/app.js"></script>

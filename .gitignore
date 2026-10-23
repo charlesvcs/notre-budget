@@ -1,6 +1,3 @@
-# Modèles d'IA locale (≈ 4,4 Go, installés par scripts/installer-modele-ia.sh)
-models/
-
 # Sauvegardes chiffrées et relevés PDF éventuels
 sauvegardes/
 *.pdf

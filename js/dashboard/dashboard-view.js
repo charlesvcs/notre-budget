@@ -5,15 +5,19 @@
  * Les calculs sont dans month-model.js ; ce module lit la base et dessine.
  */
 import { PROFILES } from '../db/schema.js';
+import { DEFAULT_PROFILE_NAMES } from '../db/seed.js';
 import {
-  DATA_CHANGED, HOUSEHOLD, deleteBudget, deleteTransaction, getBudgets, getById, getCategories, getLatestMonth,
-  getSetting, getTransactionsByMonth, notifyDataChanged, put, remove, saveRules, saveTransaction, setBudget, setSetting, toCents,
+  DATA_CHANGED, HOUSEHOLD, deleteBudget, deleteTransaction, getActiveProfiles, getBudgets, getById, getCategories,
+  getLatestMonth, getLivrets, getProfileNames, getSetting, getTransactionsByMonth, notifyDataChanged, put, remove,
+  saveRules, saveTransaction, setActiveProfiles, setBudget, setSetting, toCents,
 } from '../db/database.js';
 import { merchantKey } from '../import/categorizer.js';
 import {
   ALL_PROFILES, TREND_MONTHS, addMonths, buildMonthModel, displayLabel, skipKey,
 } from './month-model.js';
 import { renderDonut } from './donut.js';
+import { matchFlows } from '../epargne/livret-model.js';
+import { PRODUCTS } from '../epargne/livret-rates.js';
 
 const euro0 = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 const euro2 = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -85,6 +89,7 @@ export function mountDashboard(root = document) {
       label: $('donut-label'), legend: $('split-legend'),
     },
     split: $('split'),
+    splitHint: $('split-hint'),
     splitEmpty: $('split-empty'),
     merchants: $('merchants'),
     merchantsEmpty: $('merchants-empty'),
@@ -129,8 +134,10 @@ export function mountDashboard(root = document) {
 
   const state = {
     month: todayIso().slice(0, 7),
-    profile: ALL_PROFILES,
+    profile: PROFILES.ME,
+    userSelectedProfile: false,
     profileNames: {},
+    activeProfiles: [PROFILES.ME],
     categories: [],
     budgets: [],
     skips: [],
@@ -142,26 +149,55 @@ export function mountDashboard(root = document) {
     drafts: new Map(), // modifications en attente de « Valider », par opération
     toDelete: new Set(),
     undo: null, // états précédents, pour « Annuler » après validation
+    livrets: [], // livrets suivis dans l'écran « Épargne »
+    assign: {}, // rattachements faits à la main : opération → livret ou 'aucun'
+    destinations: new Map(), // opération d'épargne → livret (rattachement ou libellé)
+    detected: new Map(), // opération d'épargne → livret d'après le seul libellé
     loadId: 0,
   };
   const categoryOf = (id) => state.categories.find((c) => c.id === id);
+  const isSolo = () => state.activeProfiles.length <= 1;
 
   // ——— Chargement ——————————————————————————————————————————————
 
   async function load({ animate = true } = {}) {
     const loadId = ++state.loadId;
     const pastMonths = Array.from({ length: TREND_MONTHS - 1 }, (_, i) => addMonths(state.month, -(i + 1)));
-    const [categories, budgets, transactions, past, names, skips] = await Promise.all([
+    const [categories, budgets, transactions, past, names, activeProfiles, skips, livrets, assign] = await Promise.all([
       getCategories(),
       getBudgets(),
       getTransactionsByMonth(state.month),
       Promise.all(pastMonths.map(getTransactionsByMonth)).then((lists) => lists.flat()),
-      getSetting('profileNames'),
+      getProfileNames(),
+      getActiveProfiles(),
       getSetting('recurringSkips'),
+      getLivrets(),
+      getSetting('livretAssign'),
     ]);
     if (loadId !== state.loadId) return; // un chargement plus récent est parti entre-temps
 
-    Object.assign(state, { categories, budgets, profileNames: names ?? {}, skips: skips ?? [] });
+    Object.assign(state, {
+      categories,
+      budgets,
+      profileNames: names,
+      activeProfiles,
+      skips: skips ?? [],
+      livrets,
+      assign: assign ?? {},
+    });
+    if (!state.userSelectedProfile) {
+      state.profile = activeProfiles.length > 1 ? ALL_PROFILES : activeProfiles[0];
+    } else if (state.profile === ALL_PROFILES && activeProfiles.length <= 1) {
+      state.profile = activeProfiles[0];
+    } else if (state.profile !== ALL_PROFILES && !activeProfiles.includes(state.profile)) {
+      state.profile = activeProfiles.length > 1 ? ALL_PROFILES : activeProfiles[0];
+    }
+    // Vers quel livret va chaque ligne d'épargne du mois
+    const savings = new Set(categories.filter((c) => c.kind === 'epargne').map((c) => c.id));
+    const destinationsOf = (links) => new Map([...matchFlows(transactions, livrets, links, savings).byLivret]
+      .flatMap(([livretId, flows]) => flows.map((f) => [f.id, livretId])));
+    state.destinations = destinationsOf(state.assign);
+    state.detected = destinationsOf({});
     state.model = buildMonthModel({
       month: state.month,
       today: todayIso(),
@@ -200,15 +236,17 @@ export function mountDashboard(root = document) {
 
   function renderProfiles() {
     const options = [
-      [ALL_PROFILES, 'Tous'],
-      [PROFILES.ME, state.profileNames[PROFILES.ME] ?? 'Moi'],
-      [PROFILES.PARTNER, state.profileNames[PROFILES.PARTNER] ?? 'Ma compagne'],
-      [PROFILES.SHARED, state.profileNames[PROFILES.SHARED] ?? 'Commun'],
+      ...(state.activeProfiles.length > 1 ? [[ALL_PROFILES, 'Tous']] : []),
+      ...state.activeProfiles.map((p) => [p, state.profileNames[p] ?? DEFAULT_PROFILE_NAMES[p]]),
     ];
-    const signature = options.map((o) => o.join(':')).join('|');
+    const addable = [
+      ...(!state.activeProfiles.includes(PROFILES.PARTNER) ? [[PROFILES.PARTNER, '+ Profil', 'Ajouter un second profil']] : []),
+      ...(!state.activeProfiles.includes(PROFILES.SHARED) ? [[PROFILES.SHARED, '+ Compte commun', 'Ajouter un compte commun']] : []),
+    ];
+    const signature = `${options.map((o) => o.join(':')).join('|')}//${addable.map((a) => a[0]).join(',')}`;
     if (el.profiles.dataset.signature !== signature) {
       el.profiles.dataset.signature = signature;
-      el.profiles.querySelectorAll('label').forEach((l) => l.remove());
+      el.profiles.querySelectorAll('label, .seg-add').forEach((n) => n.remove());
       for (const [value, name] of options) {
         const label = document.createElement('label');
         const input = document.createElement('input');
@@ -219,21 +257,39 @@ export function mountDashboard(root = document) {
         span.textContent = name;
         if (value !== ALL_PROFILES) label.title = 'Double-cliquez pour changer ce nom';
         label.append(input, span);
+        if (value === PROFILES.PARTNER || value === PROFILES.SHARED) {
+          const rm = document.createElement('button');
+          rm.type = 'button';
+          rm.className = 'seg-remove';
+          rm.dataset.removeProfile = value;
+          rm.title = `Retirer « ${name} » de l'affichage`;
+          rm.setAttribute('aria-label', `Retirer ${name}`);
+          rm.textContent = '×';
+          label.append(rm);
+        }
         el.profiles.append(label);
       }
+      for (const [profile, text, title] of addable) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'seg-add';
+        btn.dataset.addProfile = profile;
+        btn.title = title;
+        btn.textContent = text;
+        el.profiles.append(btn);
+      }
     }
-    el.profiles.querySelector(`input[value="${state.profile}"]`).checked = true;
+    const radio = el.profiles.querySelector(`input[value="${state.profile}"]`);
+    if (radio) radio.checked = true;
   }
 
-  // ——— Noms des personnes : double-clic sur un nom du sélecteur ————————
-
-  const DEFAULT_NAMES = { [PROFILES.ME]: 'Moi', [PROFILES.PARTNER]: 'Ma compagne', [PROFILES.SHARED]: 'Commun' };
+  // ——— Noms des profils : double-clic sur un nom du sélecteur ————————
 
   function startRename(label) {
     const profile = label.querySelector('input').value;
     if (profile === ALL_PROFILES || label.querySelector('.seg-input')) return;
     const span = label.querySelector('span');
-    const before = state.profileNames[profile] ?? DEFAULT_NAMES[profile];
+    const before = state.profileNames[profile] ?? DEFAULT_PROFILE_NAMES[profile];
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'seg-input';
@@ -252,12 +308,12 @@ export function mountDashboard(root = document) {
       done = true;
       const name = input.value.trim();
       const others = Object.values(PROFILES).filter((p) => p !== profile)
-        .map((p) => (state.profileNames[p] ?? DEFAULT_NAMES[p]).toLowerCase());
+        .map((p) => (state.profileNames[p] ?? DEFAULT_PROFILE_NAMES[p]).toLowerCase());
       input.remove();
       span.hidden = false;
       if (!save || !name || name === before || others.includes(name.toLowerCase())) return;
       span.textContent = name;
-      await setSetting('profileNames', { ...DEFAULT_NAMES, ...state.profileNames, [profile]: name });
+      await setSetting('profileNames', { ...DEFAULT_PROFILE_NAMES, ...state.profileNames, [profile]: name });
       notifyDataChanged(); // tableau de bord et écran d'import se mettent à jour
     };
     input.addEventListener('input', () => { input.size = Math.max(input.value.length, 4); });
@@ -269,16 +325,46 @@ export function mountDashboard(root = document) {
     input.addEventListener('blur', () => finish(true));
   }
 
+  el.profiles.addEventListener('click', async (e) => {
+    const addBtn = e.target.closest('[data-add-profile]');
+    if (addBtn) {
+      const added = addBtn.dataset.addProfile;
+      await setActiveProfiles([...state.activeProfiles, added]);
+      state.userSelectedProfile = true;
+      state.profile = ALL_PROFILES;
+      notifyDataChanged();
+      if (added === PROFILES.PARTNER) {
+        requestAnimationFrame(() => {
+          const label = el.profiles.querySelector(`input[value="${PROFILES.PARTNER}"]`)?.closest('label');
+          if (label) startRename(label);
+        });
+      }
+      return;
+    }
+    const rmBtn = e.target.closest('[data-remove-profile]');
+    if (rmBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const removed = rmBtn.dataset.removeProfile;
+      const next = state.activeProfiles.filter((p) => p !== removed);
+      await setActiveProfiles(next);
+      if (state.profile === removed || next.length <= 1) {
+        state.profile = next.length > 1 ? ALL_PROFILES : next[0];
+      }
+      notifyDataChanged();
+    }
+  });
+
   el.profiles.addEventListener('dblclick', (e) => {
     const label = e.target.closest('label');
-    if (label) startRename(label);
+    if (label && !e.target.closest('.seg-remove')) startRename(label);
   });
   // Équivalent clavier : F2 sur la vue sélectionnée
   el.profiles.addEventListener('keydown', (e) => {
     if (e.key === 'F2' && e.target.matches('input[type="radio"]')) startRename(e.target.closest('label'));
   });
 
-  const profileName = (p) => (p === ALL_PROFILES ? 'le foyer' : state.profileNames[p] ?? p);
+  const profileName = (p) => (p === ALL_PROFILES ? 'l\'ensemble des comptes' : state.profileNames[p] ?? p);
 
   // ——— La barre du mois ————————————————————————————————————————
 
@@ -295,7 +381,8 @@ export function mountDashboard(root = document) {
 
     if (empty) {
       el.heroNote.textContent = '';
-      el.emptyText.textContent = `Aucune opération en ${formatMonth(m.month)}${state.profile === ALL_PROFILES ? '' : ` pour ${profileName(state.profile)}`}. Importez le relevé du mois pour voir votre reste à vivre.`;
+      const suffix = isSolo() || state.profile === ALL_PROFILES ? '' : ` pour ${profileName(state.profile)}`;
+      el.emptyText.textContent = `Aucune opération en ${formatMonth(m.month)}${suffix}. Importez le relevé du mois pour voir votre reste à vivre.`;
       return;
     }
 
@@ -368,9 +455,9 @@ export function mountDashboard(root = document) {
   // ——— Catégories & enveloppes —————————————————————————————————
 
   function renderCategories(m, animate) {
-    const scope = state.profile === ALL_PROFILES ? 'du foyer' : `de ${profileName(state.profile)}`;
+    const scope = isSolo() ? '' : state.profile === ALL_PROFILES ? ' (total)' : ` (${profileName(state.profile)})`;
     el.catsHint.textContent = state.editing
-      ? `Enveloppes mensuelles ${scope}, en euros. Laissez vide pour ne pas fixer d'enveloppe.`
+      ? `Enveloppes mensuelles${scope}, en euros. Laissez vide pour ne pas fixer d'enveloppe.`
       : 'Choisissez une catégorie pour voir son évolution et ses opérations.';
     el.compareHead.textContent = m.averageMonths
       ? `Par rapport à la moyenne (${m.averageMonths} mois)`
@@ -465,7 +552,9 @@ export function mountDashboard(root = document) {
     }
     const wrap = document.createElement('div');
     wrap.className = 'env';
-    wrap.dataset.status = r.status ?? 'none';
+    // L'à-venir qui fait passer l'enveloppe au-delà de sa limite compte comme un dépassement
+    const projectedOver = r.status !== 'depasse' && r.spent + r.upcoming > r.limit ? r.spent + r.upcoming - r.limit : 0;
+    wrap.dataset.status = projectedOver ? 'depasse' : r.status ?? 'none';
 
     const meter = document.createElement('div');
     meter.className = 'meter';
@@ -487,11 +576,14 @@ export function mountDashboard(root = document) {
     line.className = 'env__line';
     const status = document.createElement('span');
     status.className = 'status';
-    if (r.status) {
+    if (projectedOver) {
+      status.innerHTML = icon('depasse');
+      status.append(`Dépassée de ${money(projectedOver)} avec l'à-venir`);
+    } else if (r.status) {
       status.innerHTML = icon(r.status);
       status.append(r.status === 'depasse'
         ? `Dépassée de ${money(r.spent - r.limit)}`
-        : `${STATUS_LABELS[r.status]} · ${percentFormat.format(r.ratio)}`);
+        : r.spent === r.limit ? 'Atteinte' : `${STATUS_LABELS[r.status]} · ${percentFormat.format(r.ratio)}`);
     } else {
       status.textContent = 'Aucune dépense';
     }
@@ -515,8 +607,9 @@ export function mountDashboard(root = document) {
     input.className = 'js-envelope';
     input.dataset.category = r.category.id;
     input.dataset.average = String(r.average ?? '');
-    // Valeur propre à la vue (foyer ou personne) : c'est elle qu'on enregistre
-    const own = state.budgets.find((b) => b.categoryId === r.category.id && b.profile === budgetScope());
+    // Valeur propre à la vue (ou globale en mode solo) : c'est elle qu'on enregistre
+    const own = state.budgets.find((b) => b.categoryId === r.category.id && b.profile === budgetScope())
+      ?? (isSolo() ? state.budgets.find((b) => b.categoryId === r.category.id && b.profile === HOUSEHOLD) : null);
     input.value = own ? String(own.monthlyLimit / 100).replace('.', ',') : '';
     input.placeholder = r.average ? `≈ ${roundUp(r.average) / 100}` : '';
     input.setAttribute('aria-label', `Enveloppe mensuelle ${r.category.name}, en euros`);
@@ -597,8 +690,13 @@ export function mountDashboard(root = document) {
     try {
       for (const [categoryId, cents] of values) {
         const existing = state.budgets.find((b) => b.categoryId === categoryId && b.profile === scope);
-        if (cents == null && existing) await deleteBudget(existing.id);
-        else if (cents != null && cents !== existing?.monthlyLimit) await setBudget({ categoryId, profile: scope, monthlyLimit: cents });
+        const fallback = isSolo() ? state.budgets.find((b) => b.categoryId === categoryId && b.profile === HOUSEHOLD) : null;
+        if (cents == null) {
+          if (existing) await deleteBudget(existing.id);
+          if (fallback) await deleteBudget(fallback.id);
+        } else if (cents !== (existing ?? fallback)?.monthlyLimit) {
+          await setBudget({ categoryId, profile: scope, monthlyLimit: cents });
+        }
       }
     } finally {
       el.envSave.disabled = false;
@@ -627,9 +725,11 @@ export function mountDashboard(root = document) {
       : m.categories.some((r) => r.limit != null) ? m.categories.reduce((s, r) => s + (r.limit ?? 0), 0) : null;
 
     el.trendTitle.textContent = selected ? `Évolution · ${selected.category.name}` : 'Évolution sur 6 mois';
-    el.trendHint.textContent = selected
+    // L'enveloppe est nommée dans l'aide : une étiquette sur le trait chevauchait les montants
+    el.trendHint.textContent = (selected
       ? 'Dépenses de cette catégorie, mois par mois.'
-      : 'Toutes les dépenses du mois, hors épargne.';
+      : 'Toutes les dépenses du mois, hors épargne.')
+      + (limit != null ? ` Trait : enveloppe de ${money(limit)}.` : '');
     el.trendClear.hidden = !selected;
     if (selected) {
       el.trendClear.textContent = selected.category.name;
@@ -671,10 +771,8 @@ export function mountDashboard(root = document) {
     if (limit != null) {
       const line = document.createElement('span');
       line.className = 'trend__limit';
-      line.style.setProperty('--h', pct(limit / max));
-      const tag = document.createElement('span');
-      tag.textContent = `enveloppe ${money(limit)}`;
-      line.append(tag);
+      line.style.setProperty('--hr', String(Math.min(1, limit / max)));
+      line.setAttribute('aria-hidden', 'true');
       nodes.push(line);
     }
     el.trend.replaceChildren(...nodes);
@@ -728,6 +826,7 @@ export function mountDashboard(root = document) {
         ids: category ? [category.id] : r.ids,
       };
     });
+    el.splitHint.textContent = 'La part de chaque catégorie dans les dépenses du mois.';
     renderDonut(el.donut, slices, {
       total: money(m.spent),
       totalLabel: 'dépensés',
@@ -877,9 +976,9 @@ export function mountDashboard(root = document) {
     el.fCat.replaceChildren(...options);
     el.fCat.value = !f.categories ? '' : f.categories.length > 1 ? '__group' : f.categories[0];
 
-    el.fProfileWrap.hidden = state.profile !== ALL_PROFILES;
-    el.fProfile.replaceChildren(new Option('Toutes les personnes', ''),
-      ...Object.values(PROFILES).map((p) => new Option(state.profileNames[p] ?? p, p)));
+    el.fProfileWrap.hidden = state.profile !== ALL_PROFILES || isSolo();
+    el.fProfile.replaceChildren(new Option('Tous les profils', ''),
+      ...state.activeProfiles.map((p) => new Option(state.profileNames[p] ?? p, p)));
     el.fProfile.value = f.profile;
     el.fReset.hidden = !isFiltered();
   }
@@ -978,7 +1077,12 @@ export function mountDashboard(root = document) {
     const meta = [kind, category?.name];
     if (state.profile === ALL_PROFILES) meta.push(state.profileNames[t.profile] ?? t.profile);
     if (t.recurring) meta.push('mensualisée');
-    if (t.offBudget) meta.push(category?.kind === 'epargne' ? 'épargne du mois' : 'hors budget');
+    if (category?.kind === 'epargne' && state.livrets.length) {
+      const dest = state.destinations.get(t.id);
+      meta.push(dest ? `épargne vers ${livretName(dest)}` : state.assign[t.id] === 'aucun' ? 'épargne, autre placement' : 'épargne, livret à préciser');
+    } else if (t.offBudget) {
+      meta.push(category?.kind === 'epargne' ? 'épargne du mois' : 'hors budget');
+    }
     node.querySelector('.js-meta').textContent = meta.filter(Boolean).join(' · ');
     node.querySelector('.js-amount').textContent = (t.type === 'entree' ? '+' : '−') + moneyExact(t.amount);
     return node;
@@ -1001,10 +1105,23 @@ export function mountDashboard(root = document) {
     f('categoryId').append(...state.categories.map((c) => new Option(`${c.icon ?? ''} ${c.name}`.trim(), c.id)));
     f('categoryId').value = value('categoryId');
     f('type').value = value('type');
-    f('profile').append(...Object.values(PROFILES).map((p) => new Option(state.profileNames[p] ?? p, p)));
+    const profileChoices = state.activeProfiles.includes(value('profile'))
+      ? state.activeProfiles
+      : [...state.activeProfiles, value('profile')];
+    f('profile').append(...profileChoices.map((p) => new Option(state.profileNames[p] ?? p, p)));
     f('profile').value = value('profile');
+    f('profile').closest('label').hidden = profileChoices.length <= 1;
     f('amount').value = 'amount' in draft ? draft.amount : centsToInput(t.amount);
     f('recurring').checked = Boolean(value('recurring'));
+    const auto = state.detected.get(t.id);
+    f('destination').append(
+      new Option(auto ? `${livretName(auto)} (d'après le libellé)` : 'À préciser', ''),
+      ...state.livrets.filter((l) => l.id !== auto).map((l) => new Option(livretName(l.id), l.id)),
+      new Option('Autre placement (pas un livret)', 'aucun'),
+    );
+    f('destination').value = 'destination' in draft ? draft.destination : (state.assign[t.id] ?? '');
+    f('destination').setAttribute('aria-label', `Vers quel livret — ${name}`);
+    toggleDestination(node, value('categoryId'));
     for (const el2 of node.querySelectorAll('input, select')) el2.setAttribute('aria-describedby', '');
     node.querySelectorAll('.visually-hidden').forEach((s) => { s.textContent += ` — ${name}`; });
 
@@ -1016,6 +1133,20 @@ export function mountDashboard(root = document) {
     node.classList.toggle('is-dirty', state.drafts.has(t.id));
     node.querySelectorAll('input, select').forEach((i) => { i.disabled = doomed; });
     return node;
+  }
+
+  /** Nom d'un livret suivi, avec son titulaire s'il y en a plusieurs. */
+  function livretName(id) {
+    const livret = state.livrets.find((l) => l.id === id);
+    if (!livret) return 'un livret';
+    const holders = new Set(state.livrets.map((l) => l.profile));
+    const name = PRODUCTS[livret.product].name;
+    return holders.size > 1 ? `${name} · ${state.profileNames[livret.profile] ?? livret.profile}` : name;
+  }
+
+  /** Le choix du livret n'apparaît que pour une ligne d'épargne, et s'il y a des livrets suivis. */
+  function toggleDestination(row, categoryId) {
+    row.querySelector('.op-edit__dest').hidden = !state.livrets.length || categoryOf(categoryId)?.kind !== 'epargne';
   }
 
   const centsToInput = (cents) => (cents / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, useGrouping: false });
@@ -1031,6 +1162,10 @@ export function mountDashboard(root = document) {
     if (f('profile').value !== original.profile) draft.profile = f('profile').value;
     if (f('recurring').checked !== Boolean(original.recurring)) draft.recurring = f('recurring').checked;
     if (f('amount').value.trim() !== centsToInput(original.amount)) draft.amount = f('amount').value.trim();
+    toggleDestination(row, f('categoryId').value);
+    if (!row.querySelector('.op-edit__dest').hidden && f('destination').value !== (state.assign[original.id] ?? '')) {
+      draft.destination = f('destination').value;
+    }
     if (Object.keys(draft).length) state.drafts.set(original.id, draft);
     else state.drafts.delete(original.id);
     row.classList.toggle('is-dirty', state.drafts.has(original.id));
@@ -1089,9 +1224,12 @@ export function mountDashboard(root = document) {
   el.opsSave.addEventListener('click', async () => {
     // Vérification de toutes les lignes modifiées avant d'écrire quoi que ce soit
     const changes = [];
+    const destinations = []; // nouveaux rattachements à un livret (réglage, pas l'opération)
     let firstBad = null;
-    for (const [id, draft] of state.drafts) {
+    for (const [id, { destination, ...draft }] of state.drafts) {
       if (state.toDelete.has(id)) continue;
+      if (destination !== undefined) destinations.push({ id, destination });
+      if (!Object.keys(draft).length) continue;
       const original = await getById('transactions', id);
       const next = { ...original, ...draft };
       if ('amount' in draft) {
@@ -1113,6 +1251,14 @@ export function mountDashboard(root = document) {
     const removed = await Promise.all([...state.toDelete].map((id) => getById('transactions', id)));
     for (const { next } of changes) await saveTransaction(next);
     for (const record of removed) await deleteTransaction(record.id);
+    const previousAssign = state.assign;
+    if (destinations.length) {
+      const assign = { ...state.assign };
+      for (const { id, destination } of destinations) {
+        if (destination) assign[id] = destination; else delete assign[id];
+      }
+      await setSetting('livretAssign', assign);
+    }
     // Comme à l'import : une catégorie corrigée est retenue pour ce commerçant
     const previousRules = [];
     if (el.opsLearn.checked) {
@@ -1123,9 +1269,14 @@ export function mountDashboard(root = document) {
       await saveRules(rules);
     }
 
-    state.undo = { restore: [...changes.map((c) => c.original), ...removed], rules: previousRules };
+    state.undo = {
+      restore: [...changes.map((c) => c.original), ...removed],
+      rules: previousRules,
+      assign: destinations.length ? previousAssign : null,
+    };
     const parts = [];
-    if (changes.length) parts.push(`${changes.length} opération${changes.length > 1 ? 's' : ''} modifiée${changes.length > 1 ? 's' : ''}`);
+    const edited = new Set([...changes.map((c) => c.original.id), ...destinations.map((d) => d.id)]).size;
+    if (edited) parts.push(`${edited} opération${edited > 1 ? 's' : ''} modifiée${edited > 1 ? 's' : ''}`);
     if (removed.length) parts.push(`${removed.length} supprimée${removed.length > 1 ? 's' : ''}`);
     const moved = changes.filter(({ next }) => next.date.slice(0, 7) !== state.month).length;
     if (moved) parts.push(`${moved} déplacée${moved > 1 ? 's' : ''} dans un autre mois`);
@@ -1148,6 +1299,7 @@ export function mountDashboard(root = document) {
       if (previous) await put('rules', previous);
       else await remove('rules', key);
     }
+    if (state.undo.assign) await setSetting('livretAssign', state.undo.assign);
     state.undo = null;
     showNotice('Modifications annulées : les opérations sont revenues à leur état précédent.');
     await load({ animate: false });
@@ -1178,7 +1330,7 @@ export function mountDashboard(root = document) {
   el.latest.addEventListener('click', () => goTo(el.latest.dataset.month));
   el.profiles.addEventListener('change', (e) => {
     if (e.target.type !== 'radio') return; // le champ de renommage émet aussi « change »
-    Object.assign(state, { profile: e.target.value, editing: false, editOps: false });
+    Object.assign(state, { profile: e.target.value, userSelectedProfile: true, editing: false, editOps: false });
     state.filters.profile = '';
     el.opsEdit.hidden = false;
     el.opsEditBar.hidden = true;

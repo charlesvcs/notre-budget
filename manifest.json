@@ -1,7 +1,7 @@
 {
-  "name": "Notre Budget",
+  "name": "Mon Budget",
   "short_name": "Budget",
-  "description": "Notre budget à deux, 100 % local et hors-ligne.",
+  "description": "Suivi de budget et d'épargne, 100 % local et hors-ligne.",
   "id": "./",
   "start_url": "./index.html",
   "scope": "./",
@@ -9,8 +9,8 @@
   "orientation": "portrait",
   "lang": "fr",
   "dir": "ltr",
-  "background_color": "#FBF6EF",
-  "theme_color": "#FBF6EF",
+  "background_color": "#F4F1FF",
+  "theme_color": "#6C47FF",
   "categories": ["finance", "productivity"],
   "icons": [
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },

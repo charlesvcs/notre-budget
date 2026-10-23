@@ -225,11 +225,18 @@ function matchByAmount(templates, candidates) {
 
 /** Une ligne par catégorie de dépense : ce mois, mois dernier, moyenne, enveloppe. */
 function buildCategoryRows({ categories, budgets, profile, spentBy, upcomingBy, previousBy, averageBy }) {
-  // Vue « Tous » : l'enveloppe du foyer si elle existe, sinon la somme des enveloppes de chacun
+  // Vue « Tous » : l'enveloppe globale si elle existe, sinon la somme des enveloppes ;
+  // en vue « Moi », repli sur l'enveloppe globale si aucune enveloppe propre n'est définie.
   const own = (categoryId) => {
     const forCategory = budgets.filter((b) => b.categoryId === categoryId);
     const exact = forCategory.filter((b) => b.profile === profile);
-    return exact.length || profile !== ALL_PROFILES ? exact : forCategory;
+    if (exact.length) return exact;
+    if (profile === ALL_PROFILES) return forCategory;
+    if (profile === 'moi') {
+      const global = forCategory.filter((b) => b.profile === ALL_PROFILES);
+      if (global.length) return global;
+    }
+    return exact;
   };
 
   return categories

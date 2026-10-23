@@ -76,7 +76,7 @@ const KEYWORDS = {
   ],
   // Virements vers le compte commun
   commun: ['COMMUN', 'COMPTE COMMUN'],
-  // Opérations sans commerçant : inutile de solliciter l'IA
+  // Opérations sans commerçant identifiable
   autre: ['CHEQUE', 'CHQ', 'RETRAIT', 'RETRAIT DAB', 'DAB', 'RETRAIT ESPECES'],
   epargne: [
     'LIVRET A', 'LIVRET', 'LDDS', 'LEP', 'PEL', 'CEL', 'ASSURANCE VIE', 'PEA', 'EPARGNE',

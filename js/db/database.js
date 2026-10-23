@@ -5,7 +5,7 @@
 import {
   DB_NAME, DB_VERSION, STORES, MIGRATIONS, TRANSACTION_TYPES, PROFILES,
 } from './schema.js';
-import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from './seed.js';
+import { DEFAULT_CATEGORIES, DEFAULT_PROFILE_NAMES, DEFAULT_SETTINGS } from './seed.js';
 
 let dbPromise = null;
 
@@ -237,6 +237,13 @@ export async function getLatestMonth() {
   return cursor?.key ?? null;
 }
 
+/** Premier mois « YYYY-MM » contenant au moins une opération (ou null). */
+export async function getEarliestMonth() {
+  const { os } = await store(STORES.TRANSACTIONS);
+  const cursor = await req(os.index('month').openKeyCursor());
+  return cursor?.key ?? null;
+}
+
 // ——— Catégories ————————————————————————————————————————————————
 
 export async function getCategories({ includeArchived = false } = {}) {
@@ -248,10 +255,10 @@ export const saveCategory = (category) => put(STORES.CATEGORIES, category);
 
 // ——— Budgets ———————————————————————————————————————————————————
 
-/** Une enveloppe vaut pour un profil, ou pour tout le foyer (« tous »). */
+/** Une enveloppe vaut pour un profil, ou pour l'ensemble des comptes (« tous »). */
 export const HOUSEHOLD = 'tous';
 
-/** Crée ou met à jour l'enveloppe mensuelle d'une catégorie pour un profil ou le foyer (unique). */
+/** Crée ou met à jour l'enveloppe mensuelle d'une catégorie pour un profil ou l'ensemble (unique). */
 export async function setBudget({ categoryId, profile = PROFILES.SHARED, monthlyLimit, alertThreshold = 0.8 }) {
   assertCents(monthlyLimit, 'monthlyLimit');
   assert(PROFILE_VALUES.includes(profile) || profile === HOUSEHOLD, `profil invalide : ${profile}`);
@@ -306,13 +313,87 @@ export async function contributeToProject(id, deltaCents) {
 
 export const getProjects = () => getAll(STORES.PROJECTS);
 
+// ——— Livrets ———————————————————————————————————————————————————
+
+export const LIVRET_PRODUCTS = ['livretA', 'lep'];
+
+export async function saveLivret(input) {
+  assert(LIVRET_PRODUCTS.includes(input.product), `livret inconnu : ${input.product}`);
+  assert([PROFILES.ME, PROFILES.PARTNER].includes(input.profile), `titulaire invalide : ${input.profile}`);
+  assert(/^\d{4}-\d{2}-\d{2}$/.test(input.anchor?.date ?? ''), 'date du solde attendue au format YYYY-MM-DD');
+  assertCents(input.anchor.balance, 'anchor.balance');
+  if (input.monthlyPlan != null) assertCents(input.monthlyPlan, 'monthlyPlan');
+
+  const existing = input.id ? await getById(STORES.LIVRETS, input.id) : null;
+  return put(STORES.LIVRETS, {
+    monthlyPlan: null,
+    keywords: [],
+    ...existing,
+    ...input,
+    id: input.id ?? uuid(),
+    createdAt: existing?.createdAt ?? nowIso(),
+    updatedAt: nowIso(),
+  });
+}
+
+export const getLivrets = () => getAll(STORES.LIVRETS);
+
+export const deleteLivret = (id) => remove(STORES.LIVRETS, id);
+
 // ——— Réglages ——————————————————————————————————————————————————
 
 export async function getSetting(key) {
-  return (await getById(STORES.SETTINGS, key))?.value;
+   return (await getById(STORES.SETTINGS, key))?.value;
 }
 
 export const setSetting = (key, value) => put(STORES.SETTINGS, { key, value });
+
+/**
+ * Noms affichés des profils : normalise l'ancien libellé par défaut « Ma compagne »
+ * en « Profil 2 » pour ne jamais imposer une dynamique de couple par défaut.
+ */
+export async function getProfileNames() {
+  const saved = (await getSetting('profileNames')) ?? {};
+  const names = { ...DEFAULT_PROFILE_NAMES, ...saved };
+  if (names[PROFILES.PARTNER] === 'Ma compagne') {
+    names[PROFILES.PARTNER] = DEFAULT_PROFILE_NAMES[PROFILES.PARTNER];
+  }
+  return names;
+}
+
+/**
+ * Profils activés dans l'interface : solo (« Moi ») par défaut, avec possibilité
+ * d'activer un second profil (`compagne`) et/ou un compte commun (`commun`).
+ * Si des opérations, enveloppes ou livrets existent déjà sur ces profils et qu'aucun
+ * choix explicite n'a encore été enregistré, ils sont activés automatiquement.
+ */
+export async function getActiveProfiles() {
+  const saved = await getSetting('activeProfiles');
+  if (Array.isArray(saved) && saved.length) {
+    const ordered = Object.values(PROFILES).filter((p) => p === PROFILES.ME || saved.includes(p));
+    return ordered.length ? ordered : [PROFILES.ME];
+  }
+  const [partnerTx, sharedTx, budgets, livrets] = await Promise.all([
+    getByIndex(STORES.TRANSACTIONS, 'profile', PROFILES.PARTNER),
+    getByIndex(STORES.TRANSACTIONS, 'profile', PROFILES.SHARED),
+    getBudgets(),
+    getLivrets(),
+  ]);
+  const active = [PROFILES.ME];
+  if (partnerTx.length || budgets.some((b) => b.profile === PROFILES.PARTNER) || livrets.some((l) => l.profile === PROFILES.PARTNER)) {
+    active.push(PROFILES.PARTNER);
+  }
+  if (sharedTx.length || budgets.some((b) => b.profile === PROFILES.SHARED)) {
+    active.push(PROFILES.SHARED);
+  }
+  return active;
+}
+
+export async function setActiveProfiles(profiles) {
+  const ordered = Object.values(PROFILES).filter((p) => p === PROFILES.ME || profiles.includes(p));
+  await setSetting('activeProfiles', ordered);
+  return ordered;
+}
 
 // ——— Règles de catégorisation apprises ——————————————————————————
 
@@ -343,7 +424,7 @@ export async function exportAll() {
 
 /** Remplace TOUT le contenu de la base par un export. Atomique : tout ou rien. */
 export async function importAll(backup) {
-  assert(backup?.app === DB_NAME && backup.data, 'Fichier de sauvegarde non reconnu');
+  assert((backup?.app === DB_NAME || backup?.app === 'mon-budget') && backup.data, 'Fichier de sauvegarde non reconnu');
   assert(backup.version <= DB_VERSION, 'Sauvegarde créée par une version plus récente de l\'app');
 
   // Les réglages propres à cet appareil survivent à la restauration

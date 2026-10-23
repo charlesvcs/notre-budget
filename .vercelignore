@@ -1,5 +1,4 @@
-# Seule l'application est publiée : jamais de données, de sauvegardes ni de modèles d'IA
-models/
+# Seule l'application est publiée : jamais de données ni de sauvegardes
 sauvegardes/
 scripts/
 .impeccable/

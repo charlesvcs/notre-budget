@@ -60,11 +60,16 @@ export function renderDonut(el, slices, text) {
     button.type = 'button';
     button.dataset.slice = String(i);
     button.style.setProperty('--c', s.color);
+    const rail = span('rail');
+    const fill = span('rail__fill');
+    fill.style.setProperty('--w', `${(s.share * 100).toFixed(2)}%`);
+    rail.append(fill);
     button.append(
-      span('swatch'),
-      span('name', `${s.icon ? `${s.icon} ` : ''}${s.name}`),
+      span('icon', s.icon ?? ''),
+      span('name', s.name),
       span('amount', text.format(s.amount)),
       span('share', percent(s.share)),
+      rail,
     );
     button.addEventListener('pointerenter', () => focus(i));
     button.addEventListener('pointerleave', showTotal);

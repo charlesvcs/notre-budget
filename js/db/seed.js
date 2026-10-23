@@ -23,14 +23,24 @@ export const DEFAULT_CATEGORIES = [
   { id: 'cafe',         name: 'Café',                    kind: 'sortie',  icon: '☕', color: '#9C6B4E', group: 'perso' },
   { id: 'travail',      name: 'Travail',                 kind: 'sortie',  icon: '💼', color: '#4E8AC9', group: 'perso' },
   { id: 'parking',      name: 'Parking',                 kind: 'sortie',  icon: '🅿️', color: '#3F9C8F', group: 'perso' },
-  // Virements vers le compte commun : les courses communes (soirs, week-ends)
+  // Virements ou dépenses du compte commun
   { id: 'commun',       name: 'Courses communes',        kind: 'sortie',  icon: '🛒', color: '#D98E4E', group: 'perso' },
 ].map((c, i) => ({ ...c, order: i, archived: false }));
+
+export const DEFAULT_PROFILE_NAMES = Object.freeze({
+  [PROFILES.ME]: 'Moi',
+  [PROFILES.PARTNER]: 'Profil 2',
+  [PROFILES.SHARED]: 'Commun',
+});
 
 export const DEFAULT_SETTINGS = [
   {
     key: 'profileNames',
-    value: { [PROFILES.ME]: 'Moi', [PROFILES.PARTNER]: 'Ma compagne', [PROFILES.SHARED]: 'Commun' },
+    value: { ...DEFAULT_PROFILE_NAMES },
+  },
+  {
+    key: 'activeProfiles',
+    value: [PROFILES.ME],
   },
   { key: 'currency', value: 'EUR' },
   { key: 'locale', value: 'fr-FR' },

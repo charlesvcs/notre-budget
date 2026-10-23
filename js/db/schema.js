@@ -1,5 +1,5 @@
 /**
- * Schéma de la base locale « Notre Budget ».
+ * Schéma de la base locale « Mon Budget ».
  *
  * Conventions :
  *  - Les montants sont stockés en CENTIMES (entiers) pour éviter les erreurs
@@ -10,10 +10,11 @@
  *    export/import entre appareils, contrairement aux auto-incréments.
  */
 
+// Identifiant interne stable de la base IndexedDB (conservé pour compatibilité des bases et sauvegardes).
 export const DB_NAME = 'notre-budget';
 
 // Incrémenter à chaque changement de schéma et ajouter l'étape dans MIGRATIONS.
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 
 export const STORES = Object.freeze({
   TRANSACTIONS: 'transactions',
@@ -22,6 +23,7 @@ export const STORES = Object.freeze({
   PROJECTS: 'projects',
   SETTINGS: 'settings',
   RULES: 'rules',
+  LIVRETS: 'livrets',
 });
 
 export const TRANSACTION_TYPES = Object.freeze({
@@ -69,7 +71,7 @@ export const PROFILES = Object.freeze({
  * Budget {               « enveloppe » mensuelle d'une catégorie
  *   id: string            UUID
  *   categoryId: string    → Category.id
- *   profile: 'moi' | 'compagne' | 'commun' | 'tous'   ('tous' = enveloppe du foyer)
+ *   profile: 'moi' | 'compagne' | 'commun' | 'tous'   ('tous' = enveloppe globale)
  *   monthlyLimit: number  centimes
  *   alertThreshold: number  0–1, ex. 0.8 = alerte à 80 %
  * }  — unique sur [categoryId, profile]
@@ -97,6 +99,21 @@ export const PROFILES = Object.freeze({
  *   hits: number          nombre de fois où la règle a été confirmée
  *   updatedAt: string
  * }
+ *
+ * Livret {                livret réglementé suivi dans l'écran « Épargne » (v5)
+ *   id: string            UUID
+ *   product: 'livretA' | 'lep'
+ *   profile: 'moi' | 'compagne'   titulaire (un seul livret de chaque sorte par personne)
+ *   anchor: { date: "YYYY-MM-DD", balance: number }   solde connu (centimes), saisi par vous
+ *   monthlyPlan: number|null      versement mensuel prévu (centimes) ; null = d'après les relevés
+ *   keywords: string[]    mots du libellé qui désignent ce livret dans les virements
+ *   createdAt: string
+ *   updatedAt: string
+ * }
+ *
+ * Réglages liés : livretAssign { [transactionId]: livretId | 'aucun' } (rattachements
+ * faits à la main), livretRates [{ from, livretA, lep }] (taux saisis),
+ * inflation { rate, month }.
  */
 
 /**
@@ -145,7 +162,7 @@ export const MIGRATIONS = {
     };
   },
 
-  // Compte commun = courses communes du couple (soirs et week-ends) : une vraie dépense
+  // Virements vers le compte commun comptés comme dépense commune
   4(db, tx) {
     const categories = tx.objectStore(STORES.CATEGORIES);
     const request = categories.get('commun');
@@ -159,6 +176,11 @@ export const MIGRATIONS = {
         icon: c.icon === '🤝' ? '🛒' : c.icon,
       });
     };
+  },
+
+  5(db) {
+    const livrets = db.createObjectStore(STORES.LIVRETS, { keyPath: 'id' });
+    livrets.createIndex('profile', 'profile');
   },
 };
 

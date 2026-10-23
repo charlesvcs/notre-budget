@@ -63,7 +63,7 @@ export function mountBackupView(root = document) {
     let text;
     let tone = 'neutral';
     if (!server && isLocalhost()) {
-      text = 'Le serveur de sauvegarde n\'est pas lancé. Fermez la commande « python3 -m http.server », puis double-cliquez sur « Lancer Notre Budget.command » dans le dossier Finance.';
+      text = 'Le serveur de sauvegarde n\'est pas lancé. Fermez la commande « python3 -m http.server », puis double-cliquez sur « Lancer Mon Budget.command » dans le dossier Finance.';
       tone = 'warning';
     } else if (!server) {
       text = 'Sur cet appareil, pas de sauvegarde automatique : elle se fait sur le Mac, avec le serveur local. Ici, vous pouvez restaurer une sauvegarde reçue par AirDrop.';
@@ -150,7 +150,7 @@ export function mountBackupView(root = document) {
   el.share.addEventListener('click', async () => {
     const file = backupAsFile(await createBackup());
     try {
-      await navigator.share({ files: [file], title: 'Sauvegarde Notre Budget' });
+      await navigator.share({ files: [file], title: 'Sauvegarde Mon Budget' });
     } catch (err) {
       if (err.name !== 'AbortError') download(file);
     }
@@ -177,7 +177,7 @@ export function mountBackupView(root = document) {
     try {
       pending.file = JSON.parse(await file.text());
     } catch {
-      showRestoreStatus('Ce fichier n\'est pas une sauvegarde de Notre Budget.', 'error');
+      showRestoreStatus('Ce fichier n\'est pas une sauvegarde de Mon Budget.', 'error');
       return;
     }
     el.restoreName.textContent = `Fichier : ${file.name}${pending.file.savedAt ? ` · sauvegardé le ${when.format(new Date(pending.file.savedAt))}` : ''}`;

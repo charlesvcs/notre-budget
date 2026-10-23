@@ -4,16 +4,9 @@
  * IndexedDB et ne transitent jamais par le réseau.
  *
  * Pour publier une nouvelle version : incrémenter CACHE_VERSION.
- *
- * Le moteur WebAssembly et le modèle d'IA (≈ 3 Go) ne sont PAS pré-chargés :
- * ils sont mis en cache à leur première utilisation (règle « cache d'abord »
- * ci-dessous), pour ne rien imposer à un iPhone qui n'utilise pas l'IA.
- * Ils ont leur propre cache, conservé d'une version de l'app à l'autre.
  */
-const CACHE_VERSION = 'v29';
-const CACHE_NAME = `notre-budget-${CACHE_VERSION}`;
-const AI_CACHE = 'notre-budget-ia';
-const isAIFile = (url) => url.pathname.includes('/models/') || url.pathname.endsWith('.wasm');
+const CACHE_VERSION = 'v44';
+const CACHE_NAME = `mon-budget-${CACHE_VERSION}`;
 
 const APP_SHELL = [
   './',
@@ -23,6 +16,7 @@ const APP_SHELL = [
   './css/dashboard.css',
   './css/import.css',
   './css/backup.css',
+  './css/epargne.css',
   './js/app.js',
   './js/db/schema.js',
   './js/db/seed.js',
@@ -32,18 +26,24 @@ const APP_SHELL = [
   './js/dashboard/donut.js',
   './js/backup/backup-core.js',
   './js/backup/backup-view.js',
+  './js/epargne/epargne-view.js',
+  './js/epargne/livret-model.js',
+  './js/epargne/livret-rates.js',
+  './js/epargne/format.js',
+  './js/epargne/indicators.js',
+  './js/epargne/widgets.js',
+  './js/epargne/export.js',
+  './js/epargne/live-data.js',
+  './js/export/xlsx-writer.js',
   './js/import/import-view.js',
   './js/import/pdf-reader.js',
   './js/import/pdf-layout.js',
   './js/import/statement-parser.js',
   './js/import/categorizer.js',
-  './js/import/ai/ai-shared.js',
-  './js/import/ai/ai-client.js',
-  './js/import/ai/ai-worker.js',
-  './lib/transformers/transformers.min.js',
   './lib/pdfjs/pdf.min.js',
   './lib/pdfjs/pdf.worker.min.js',
   './icons/icon.svg',
+  './fonts/nunito-latin-var.woff2',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
@@ -64,7 +64,7 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((keys) => Promise.all(
         keys
-          .filter((k) => k.startsWith('notre-budget-') && k !== CACHE_NAME && k !== AI_CACHE)
+          .filter((k) => (k.startsWith('mon-budget-') || k.startsWith('notre-budget-')) && k !== CACHE_NAME)
           .map((k) => caches.delete(k)),
       ))
       .then(() => self.clients.claim()),
@@ -97,7 +97,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cached) => cached ?? fetch(request).then((response) => {
       if (response.ok) {
         const copy = response.clone();
-        caches.open(isAIFile(url) ? AI_CACHE : CACHE_NAME).then((cache) => cache.put(request, copy));
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
       }
       return response;
     })),

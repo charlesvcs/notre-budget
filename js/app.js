@@ -3,12 +3,13 @@ import { mountImportView } from './import/import-view.js';
 import { mountDashboard } from './dashboard/dashboard-view.js';
 import { mountBackupView } from './backup/backup-view.js';
 import { mountEpargneView } from './epargne/epargne-view.js';
+import { mountInvestissementView } from './epargne/investissement-view.js';
 import { startAutoBackup } from './backup/backup-core.js';
 
-const ROUTES = ['mois', 'epargne', 'importer', 'sauvegarde'];
+const ROUTES = ['mois', 'epargne', 'investir', 'importer', 'sauvegarde'];
 
-/** Navigation par ancre : #/mois (par défaut), #/epargne, #/importer ou #/sauvegarde. */
-function startRouter(dashboard, epargne, backup) {
+/** Navigation par ancre : #/mois (par défaut), #/epargne, #/investir, #/importer ou #/sauvegarde. */
+function startRouter(dashboard, epargne, investir, backup) {
   const show = () => {
     const route = ROUTES.find((r) => location.hash === `#/${r}`) ?? 'mois';
     document.querySelectorAll('[data-view]').forEach((v) => { v.hidden = v.dataset.view !== route; });
@@ -18,6 +19,7 @@ function startRouter(dashboard, epargne, backup) {
     });
     if (route === 'mois') dashboard.show();
     if (route === 'epargne') epargne.show();
+    if (route === 'investir') investir.show();
     if (route === 'sauvegarde') backup.show();
     window.scrollTo({ top: 0 });
   };
@@ -45,7 +47,7 @@ async function boot() {
     }
     mountImportView();
     const backup = mountBackupView();
-    startRouter(mountDashboard(), mountEpargneView(), backup);
+    startRouter(mountDashboard(), mountEpargneView(), mountInvestissementView(), backup);
     startAutoBackup();
   } catch (err) {
     console.error('[db] Initialisation impossible :', err);

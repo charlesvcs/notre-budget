@@ -18,9 +18,9 @@ import {
   INDEX_RETURNS, PEA, globalAverage, indexStats, netValue, peaTax, taxOnExit,
 } from './pea.js';
 
-export const DEFAULT_WIDGETS = ['bulletin', 'matelas', 'gain-reel', 'comparateur', 'pea', 'projection'];
+export const DEFAULT_WIDGETS = ['bulletin', 'matelas', 'gain-reel', 'comparateur', 'projection'];
 
-/** Widgets proposés avant l'ajout du PEA : un tableau de bord enregistré avant reçoit les nouveaux. */
+/** Widgets proposés avant le matelas de sécurité enrichi : un tableau de bord enregistré avant reçoit les nouveaux. */
 export const LEGACY_WIDGETS = ['bulletin', 'gain-reel', 'comparateur', 'projection', 'indices', 'doublement', 'historique', 'matelas'];
 
 const VERDICTS = {
@@ -403,7 +403,7 @@ const matelas = {
         ? stat('À votre rythme', `${safety.reachIn} mois`, `pour atteindre ${min} mois, avec ${money(ctx.planned)} versés chaque mois`)
         : stat('À votre rythme', 'Aucun versement régulier', `${money(Math.ceil(safety.gap / 12 / 1000) * 1000)} par mois l'atteindraient en un an`);
     } else if (safety.surplus > 0) {
-      pace = stat(`Au-delà de ${max} mois`, money(safety.surplus), 'disponibles pour un placement de long terme (voir « PEA »)');
+      pace = stat(`Au-delà de ${max} mois`, money(safety.surplus), 'disponibles pour un placement de long terme (voir l\'onglet « Investir »)');
     } else {
       pace = stat('Marge', money(ctx.summary.balance - safety.low), `au-dessus de ${min} mois`);
     }
@@ -419,7 +419,7 @@ const matelas = {
 
 // ——— PEA ——————————————————————————————————————————————————————————————
 
-const pea = {
+export const peaWidget = {
   id: 'pea',
   title: 'PEA : rendement des indices et fiscalité',
   description: 'Rendement moyen des grands indices d\'actions (monde, États-Unis, France) et imposition moyenne d\'un PEA selon sa durée.',
@@ -453,7 +453,7 @@ const pea = {
       tile(`Imposition d'un PEA de plus de ${PEA.years} ans`, h('span', 'sv-num', `${pctOf(PEA.taxAfter)} des gains`),
         `soit ${pct1(after.onWithdrawal)} en moyenne de la somme retirée après 10 ans à ce rythme : les versements ne sont jamais imposés`),
       tile('Rendement net d\'un PEA sur 10 ans', h('span', 'sv-num', `${pct1(after.netRate)} / an`),
-        h('span', null, `prélèvements sociaux payés · ${signedPoints(Math.round((after.netRate - livretRate) * 1000) / 10)} face à vos livrets (${pctOf(ctx.summary.rate)})`)));
+        h('span', null, `prélèvements sociaux payés · ${signedPoints(Math.round((after.netRate - livretRate) * 1000) / 10)} face ${ctx.livretLabel ?? 'à vos livrets'} (${pctOf(ctx.summary.rate)})`)));
 
     // Indice par indice
     const table = h('table', 'sv-table sv-table--pea');
@@ -602,5 +602,5 @@ const projection = {
   },
 };
 
-export const WIDGETS = [bulletin, matelas, gainReel, comparateur, pea, projection, indices, doublement, historique];
+export const WIDGETS = [bulletin, matelas, gainReel, comparateur, projection, indices, doublement, historique];
 export const widgetById = new Map(WIDGETS.map((w) => [w.id, w]));

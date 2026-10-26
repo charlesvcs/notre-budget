@@ -83,6 +83,17 @@ export function referenceData(official) {
   };
 }
 
+/**
+ * Inflation retenue : la mesure la plus récente entre celle de l'INSEE (récupérée) et
+ * une saisie ; à mois égal, la saisie l'emporte ; à défaut, la valeur livrée avec l'app.
+ */
+export function currentInflation(saved, official) {
+  const fetched = official?.insee?.inflation;
+  if (saved && (!fetched || saved.month >= fetched.month)) return { ...saved, source: 'saisie' };
+  if (fetched) return { ...fetched, source: 'insee' };
+  return { ...OFFICIAL_INFLATION, source: 'app' };
+}
+
 /** Épargne de précaution : fourchette la plus citée, en mois de dépenses courantes. */
 export const SAFETY_MONTHS = { min: 3, max: 6 };
 

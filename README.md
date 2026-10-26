@@ -28,7 +28,7 @@ Finance/
 │   ├── epargne.css        Écran « Épargne » (livrets)
 │   └── import.css         Zone de dépôt + tableau de validation
 ├── js/
-│   ├── app.js             Démarrage : service worker, base, navigation #/mois · #/epargne · #/importer · #/sauvegarde
+│   ├── app.js             Démarrage : service worker, base, navigation #/mois · #/epargne · #/investir · #/importer · #/sauvegarde
 │   ├── backup/
 │   │   ├── backup-core.js     Chiffrement AES-GCM, sauvegarde automatique, partage
 │   │   └── backup-view.js     Onglet « Sauvegarde » (mot de passe, AirDrop, restauration)
@@ -42,6 +42,8 @@ Finance/
 │   │   ├── indicators.js      Indicateurs : rendement réel, brut équivalent, doublement, historique, matelas de sécurité
 │   │   ├── pea.js             PEA : indices, fiscalité, catalogue d'ETF, projection mensuelle
 │   │   ├── pea-view.js        Cartes « PEA » : lignes d'ETF, plus-value, fiscalité, projection
+│   │   ├── objectifs.js       Objectifs face aux stratégies (livrets, prudente, équilibrée, dynamique)
+│   │   ├── investissement-view.js  Onglet « Investir » : portefeuilles, objectifs, repères PEA
 │   │   ├── widgets.js         Widgets du tableau de bord (bulletin, comparateur, projection…)
 │   │   ├── format.js          Mise en forme partagée (euros, %, badges)
 │   │   └── epargne-view.js    Écran « Épargne » (livrets, virements à rattacher, widgets, taux)
@@ -194,13 +196,13 @@ npx vercel --prod     # mise en ligne
   widget « Matelas de sécurité » : objectifs 3 et 6 mois en euros, ce qui
   manque ou dépasse, et le temps pour atteindre 3 mois au rythme des
   versements réguliers.
-- **PEA** (widget) : rendement moyen des indices sur 5 ou 10 ans (taux annuel
+- **PEA** (repères de l'onglet « Investir ») : rendement moyen des indices sur 5 ou 10 ans (taux annuel
   composé, en euros, dividendes réinvestis, hors frais), après inflation et
   net de prélèvements sociaux ; imposition moyenne selon la durée de détention
   (avant 5 ans : 31,4 % des gains et clôture ; après : 18,6 % de prélèvements
-  sociaux), comparée au compte-titres. Un tableau de bord déjà personnalisé
-  reçoit les nouveaux widgets à la fin (réglage `epargneWidgetsKnown`).
-- **Votre PEA** (« Ajouter un PEA », un par personne, réglage `peaAccounts`) :
+  sociaux), comparée au compte-titres. Un tableau de bord « Épargne » déjà
+  personnalisé reçoit les nouveaux widgets à la fin (réglage `epargneWidgetsKnown`).
+- **Votre PEA** (onglet « Investir », « Ajouter un PEA », un par personne, réglage `peaAccounts`) :
   mois d'ouverture, valeur de chaque ligne d'ETF (catalogue `ETFS` de `pea.js`
   ou « Autre ETF » rattaché à l'indice le plus proche), frais, total versé et
   versement mensuel. La carte affiche plafond des versements, plus-value
@@ -208,6 +210,17 @@ npx vercel --prod     # mise en ligne
   20 ans) se calcule mois par mois avec un versement mensuel modifiable sur
   place, selon trois hypothèses (passé 10 ans, prudent 5 %, pessimiste 2 %,
   frais déduits), puis donne les prélèvements et le net au retrait.
+- **Objectifs** (onglet « Investir », réglage `objectifs`) : montant visé,
+  échéance, déjà mis de côté, versement mensuel. Chaque objectif est confronté
+  à quatre stratégies (livrets ; prudente 25 %, équilibrée 50 %, dynamique
+  100 % d'actions mondiales dans un PEA) : valeur nette à l'échéance, écart,
+  versement nécessaire, et perte possible si une chute comme 2008 (−40 %)
+  survenait juste avant. Stratégie conseillée selon le temps restant (livrets
+  sous 3 ans, prudente 3–5, équilibrée 5–8, dynamique au-delà). Actions à 5 %
+  par an ou au rendement des 10 dernières années, frais des ETF déduits ;
+  livrets au taux du Livret A.
+- **Repères** (onglet « Investir ») : rendement des indices et fiscalité du PEA
+  (ex-widget « PEA » de l'écran Épargne).
 - Valeurs de référence des widgets, à rafraîchir de temps en temps dans
   `livret-rates.js` : `INFLATION_INDICES` (IPCH, sous-jacente), `ANNUAL_INFLATION`
   (moyenne de chaque année, en janvier), `BENCHMARKS` (fonds euros chaque début

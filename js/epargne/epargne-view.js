@@ -10,7 +10,9 @@ import {
 } from '../db/database.js';
 import { normalizeLabel } from '../import/categorizer.js';
 import { buildLivretModel, livretKeywords, matchFlows, summarize } from './livret-model.js';
-import { LIVRET_COLORS, OFFICIAL_INFLATION, PRODUCTS, mergeRates, referenceData } from './livret-rates.js';
+import {
+  LIVRET_COLORS, OFFICIAL_INFLATION, PRODUCTS, currentInflation, mergeRates, referenceData,
+} from './livret-rates.js';
 import { SOURCES, isStale, refreshOfficialData } from './live-data.js';
 import { monthlyExpenses, realRate, safetyNet } from './indicators.js';
 import { buildEpargneWorkbook } from './export.js';
@@ -20,7 +22,6 @@ import {
   DEFAULT_WIDGETS, LEGACY_WIDGETS, WIDGETS, monthsOf, safetyVerdict, verdictTag, widgetById,
 } from './widgets.js';
 import { globalAverage } from './pea.js';
-import { mountPeaSection } from './pea-view.js';
 import {
   asDate, h, longDate, money, moneyExact, monthLong, pct, pct1, pctOf, realBadge, setWidths, signedMoney, gainBadge,
 } from './format.js';
@@ -112,7 +113,6 @@ export function mountEpargneView(root = document) {
   };
 
   const nameOf = (profile) => state.profileNames[profile] ?? profile;
-  const peaSection = mountPeaSection({ container: $('sv-pea'), addButton: $('sv-pea-add'), notify: (text, undo) => showNotice(text, undo) });
   const activeHolders = () => {
     const set = new Set([...state.activeProfiles.filter((p) => HOLDERS.includes(p)), ...state.livrets.map((l) => l.profile)]);
     return HOLDERS.filter((p) => set.has(p));
@@ -130,7 +130,7 @@ export function mountEpargneView(root = document) {
       getLivrets(), getCategories({ includeArchived: true }), getProfileNames(), getActiveProfiles(), getSetting('livretRates'),
       getSetting('inflation'), getSetting('livretAssign'), getEarliestMonth(), getSetting('epargneWidgets'), getSetting('epargneWidgetsKnown'),
       Promise.all(recentMonths.map(getTransactionsByMonth)).then((lists) => lists.flat()),
-      getSetting('donneesOfficielles'), getSetting('donneesAuto'), peaSection.load(),
+      getSetting('donneesOfficielles'), getSetting('donneesAuto'),
     ]);
     state.livrets = livrets.sort((a, b) => HOLDERS.indexOf(a.profile) - HOLDERS.indexOf(b.profile)
       || Object.keys(PRODUCTS).indexOf(a.product) - Object.keys(PRODUCTS).indexOf(b.product));
@@ -141,11 +141,7 @@ export function mountEpargneView(root = document) {
     state.auto = auto ?? true;
     state.ref = referenceData(state.official);
     state.rates = mergeRates(state.userRates, state.official?.livrets?.rates ?? []);
-    // Inflation : la mesure la plus récente entre celle de l'INSEE et une saisie ; à mois égal, la saisie l'emporte
-    const fetched = state.official?.insee?.inflation;
-    if (inflation && (!fetched || inflation.month >= fetched.month)) state.inflation = { ...inflation, source: 'saisie' };
-    else if (fetched) state.inflation = { ...fetched, source: 'insee' };
-    else state.inflation = { ...OFFICIAL_INFLATION, source: 'app' };
+    state.inflation = currentInflation(inflation, state.official);
     state.assign = assign ?? {};
     state.earliest = earliest;
     state.savingsCategories = new Set(categories.filter((c) => c.kind === 'epargne').map((c) => c.id));
@@ -204,9 +200,6 @@ export function mountEpargneView(root = document) {
       renderBoard();
     }
     renderLivrets();
-    peaSection.update({
-      today: state.today, inflation: state.inflation.rate, annual: state.ref.annual, holders: activeHolders(), nameOf, solo: isSolo(), animate: state.animate,
-    });
     renderUnmatched();
     renderParams();
     state.animate = false;
@@ -290,8 +283,10 @@ export function mountEpargneView(root = document) {
       tiles.push(tile('Matelas de sécurité', h('span', 'sv-num', '—'), 'Importez un relevé complet pour mesurer vos dépenses'));
     }
     const global = globalAverage(10, state.ref.annual);
+    const more = h('a', null, 'onglet « Investir »');
+    more.href = '#/investir';
     tiles.push(tile('Indices mondiaux (PEA)', h('span', 'sv-num', `${pct1(global.cagr)} / an`),
-      `moyenne ${global.from}–${global.to}, dividendes réinvestis, avant prélèvements sociaux`));
+      h('span', null, `moyenne ${global.from}–${global.to}, dividendes réinvestis ; votre PEA et vos objectifs dans l'`, more)));
     el.heroKpis.replaceChildren(...tiles);
     el.heroKpis.hidden = false;
   }
@@ -684,7 +679,7 @@ export function mountEpargneView(root = document) {
       const projection = state.livrets.map((livret) => buildLivretModel({
         livret, flows: state.flows.get(livret.id) ?? [], rates: state.rates, today: state.today, inflation: state.inflation.rate, horizon: 10,
       }));
-      const ctx = { ...widgetContext(), names: state.profileNames, pea: peaSection.accounts(), peaSim: peaSection.simOf };
+      const ctx = { ...widgetContext(), names: state.profileNames, pea: (await getSetting('peaAccounts')) ?? [] };
       const workbook = buildEpargneWorkbook(ctx, { flows: state.flows, projection, spending: await spendingByMonth() });
       download(new File([workbook.toBlob()], `mon-budget-epargne-${state.today}.xlsx`, {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

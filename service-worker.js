@@ -5,7 +5,7 @@
  *
  * Pour publier une nouvelle version : incrémenter CACHE_VERSION.
  */
-const CACHE_VERSION = 'v46';
+const CACHE_VERSION = 'v47';
 const CACHE_NAME = `mon-budget-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -33,6 +33,8 @@ const APP_SHELL = [
   './js/epargne/indicators.js',
   './js/epargne/pea.js',
   './js/epargne/pea-view.js',
+  './js/epargne/objectifs.js',
+  './js/epargne/investissement-view.js',
   './js/epargne/widgets.js',
   './js/epargne/export.js',
   './js/epargne/live-data.js',

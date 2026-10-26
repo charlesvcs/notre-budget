@@ -356,6 +356,19 @@
 .sv-pea__other { grid-column: span 2; }
 .sv-pea__other[hidden] { display: none; }
 
+/* ——— Investir ——— */
+
+.invest__title { margin: 12px 0 -4px; font-size: 1.3rem; }
+.invest__market { display: grid; gap: 10px; }
+.invest__market .card__hint { margin: 0; max-width: 80ch; }
+.inv-goal { display: grid; gap: 16px; }
+.inv-goal .sv-table tbody th .sv-verdict-tag { font-size: 0.78rem; }
+.inv-goal .sv-table tr.is-suggested > * { background: var(--surface-2); }
+.inv-goal .sv-table tr.is-suggested > th { border-radius: 10px 0 0 10px; padding-left: 8px; }
+.inv-goal .sv-table tr.is-suggested > td:last-child { border-radius: 0 10px 10px 0; padding-right: 8px; }
+.inv-goal .sv-verdict { max-width: 80ch; }
+.inv-goal .card__hint { margin: 0; max-width: 80ch; }
+
 /* ——— Projection ———
    Aujourd'hui en plein (bleu épargne), les fins d'année projetées en hachure,
    et un trait pour ce que le solde vaudra en euros d'aujourd'hui. */
@@ -852,6 +865,7 @@
   .sv-pea__line .js-remove { grid-column: 3; grid-row: 1; }
   .sv-pea__other { grid-column: 1 / -1; }
   .sv-pea__monthly { width: 100%; }
+  .inv-goal .sv-table tbody th small { display: none; }
   .sv-move { grid-template-columns: 3.6em minmax(0, 1fr) auto; }
   .sv-move__action { grid-column: 2 / -1; justify-self: start; }
   .sv-chart__labels { font-size: 0.72rem; }
@@ -862,7 +876,10 @@
   .sv-bulletin__main { grid-column: 1 / -1; grid-row: 2; }
   .sv-board-bar { padding-inline: 16px; }
   .app-bar__nav { gap: 0; }
-  .app-bar__nav a { padding-inline: 8px; font-size: 0.84rem; white-space: nowrap; }
+  /* Cinq onglets : plus serrés, et défilables plutôt que de déborder sur un très petit écran */
+  .app-bar__nav { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .app-bar__nav::-webkit-scrollbar { display: none; }
+  .app-bar__nav a { padding-inline: 6px; font-size: 0.78rem; white-space: nowrap; }
 }
 
 .key--today { background: var(--accent-strong); }

@@ -1,5 +1,5 @@
 /**
- * Écran « Épargne » : vos PEA (un par personne). Valeur et lignes d'ETF saisies par vous,
+ * Onglet « Investir » : vos PEA (un par personne). Valeur et lignes d'ETF saisies par vous,
  * plus-value latente, fiscalité selon l'âge du plan, et projection avec un versement
  * mensuel que vous pouvez faire varier. Les calculs sont dans pea.js ; les PEA sont
  * enregistrés dans le réglage peaAccounts.
@@ -19,8 +19,9 @@ const REMOVE_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none"
  * @param {HTMLElement} o.container  emplacement des cartes
  * @param {HTMLButtonElement} o.addButton  bouton « Ajouter un PEA »
  * @param {(text: string, undo?: Function) => void} o.notify
+ * @param {() => void} [o.onChange]  après chaque enregistrement (ajout, modification, suppression, annulation)
  */
-export function mountPeaSection({ container, addButton, notify }) {
+export function mountPeaSection({ container, addButton, notify, onChange = () => {} }) {
   const state = {
     accounts: [],
     editing: null, // id du PEA en cours de modification, ou 'nouveau'
@@ -37,7 +38,8 @@ export function mountPeaSection({ container, addButton, notify }) {
     state.accounts = accounts;
     state.editing = null;
     render();
-    notify(message, previous ? async () => { await setSetting('peaAccounts', previous); state.accounts = previous; render(); } : null);
+    onChange();
+    notify(message, previous ? async () => { await setSetting('peaAccounts', previous); state.accounts = previous; render(); onChange(); } : null);
   }
 
   function update(env) {

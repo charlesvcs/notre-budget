@@ -39,6 +39,7 @@
     <nav class="app-bar__nav" aria-label="Sections">
       <a href="#/mois" data-route="mois">Le mois</a>
       <a href="#/epargne" data-route="epargne">Épargne</a>
+      <a href="#/investir" data-route="investir" title="Investissement">Investir</a>
       <a href="#/importer" data-route="importer">Importer</a>
       <a href="#/sauvegarde" data-route="sauvegarde">Sauvegarde</a>
     </nav>
@@ -257,17 +258,62 @@
       </article>
     </section>
 
+    <!-- ——— Investir : portefeuilles, objectifs, stratégies ——— -->
+    <section class="savings invest" id="view-investir" data-view="investir" aria-labelledby="inv-title" hidden>
+      <header class="savings__head">
+        <div>
+          <h1 id="inv-title">Investissement</h1>
+          <p class="savings__lede">Vos portefeuilles, vos objectifs, et ce que chaque stratégie permet d'en attendre.</p>
+        </div>
+        <div class="savings__actions">
+          <button type="button" class="btn btn--ghost btn--small" id="inv-pea-add" hidden>Ajouter un PEA</button>
+          <button type="button" class="btn btn--ghost btn--small" id="inv-goal-add">Ajouter un objectif</button>
+        </div>
+      </header>
+
+      <p class="ops__notice" id="inv-notice" role="status" hidden>
+        <span id="inv-notice-text"></span>
+        <button type="button" class="link-btn" id="inv-undo" hidden>Annuler</button>
+      </p>
+
+      <dl class="sv-kpis" id="inv-kpis"></dl>
+
+      <h2 class="invest__title">Vos portefeuilles</h2>
+      <article class="card" id="inv-pea-empty" hidden>
+        <p class="card__empty">Aucun PEA pour l'instant. Indiquez vos ETF et leur valeur : l'app calcule la plus-value, la fiscalité selon l'âge du plan, et projette vos versements mensuels.</p>
+        <div class="sv-actions"><button type="button" class="btn btn--primary btn--small" id="inv-pea-empty-add">Ajouter un PEA</button></div>
+      </article>
+      <div class="sv-pea-list" id="inv-pea" hidden></div>
+
+      <h2 class="invest__title">Vos objectifs face aux stratégies</h2>
+      <article class="card invest__market" aria-label="Hypothèses de rendement">
+        <div id="inv-market"></div>
+        <p class="card__hint" id="inv-market-note"></p>
+      </article>
+      <article class="card" id="inv-goals-empty" hidden>
+        <p class="card__empty">Aucun objectif pour l'instant : un apport, des études, la retraite… Indiquez un montant et une date, l'app le confronte aux stratégies livrets, prudente, équilibrée et dynamique.</p>
+      </article>
+      <div class="sv-pea-list" id="inv-goals"></div>
+
+      <h2 class="invest__title">Repères</h2>
+      <article class="card sv-widget is-wide" id="inv-reference" aria-labelledby="inv-reference-title">
+        <header class="card__head card__head--row">
+          <div><h3 class="sv-widget__title" id="inv-reference-title">PEA : rendement des indices et fiscalité</h3><p class="card__hint" id="inv-reference-hint"></p></div>
+        </header>
+        <div class="sv-widget__body"></div>
+      </article>
+    </section>
+
     <!-- ——— Épargne : livrets réglementés ——— -->
     <section class="savings" id="view-epargne" data-view="epargne" aria-labelledby="sv-title" hidden>
       <header class="savings__head">
         <div>
           <h1 id="sv-title">Épargne</h1>
-          <p class="savings__lede">Vos livrets et votre PEA : ce qu'ils rapportent, ce qu'ils valent vraiment une fois l'inflation passée, et où ils vous mènent.</p>
+          <p class="savings__lede">Vos livrets, leurs intérêts, et ce qu'ils valent vraiment une fois l'inflation passée.</p>
         </div>
         <div class="savings__actions">
           <button type="button" class="btn btn--ghost btn--small" id="sv-export" hidden>Exporter en Excel</button>
           <button type="button" class="btn btn--ghost btn--small" id="sv-add" hidden>Ajouter un livret</button>
-          <button type="button" class="btn btn--ghost btn--small" id="sv-pea-add" hidden>Ajouter un PEA</button>
         </div>
       </header>
 
@@ -309,9 +355,6 @@
       </article>
 
       <div class="sv-grid" id="sv-livrets"></div>
-
-      <!-- PEA : lignes d'ETF saisies par vous, projection avec versement mensuel -->
-      <div class="sv-pea-list" id="sv-pea" hidden></div>
 
       <article class="card" id="sv-unmatched-card" aria-labelledby="sv-unmatched-title" hidden>
         <header class="card__head">

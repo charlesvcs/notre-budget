@@ -40,7 +40,8 @@ Finance/
 │   │   ├── livret-rates.js    Plafonds, taux officiels du Livret A et du LEP, inflation INSEE
 │   │   ├── livret-model.js    Calculs : quinzaines, intérêts au 31/12, rendement réel, projection
 │   │   ├── indicators.js      Indicateurs : rendement réel, brut équivalent, doublement, historique, matelas de sécurité
-│   │   ├── pea.js             PEA : performances des indices (MSCI World, ACWI, S&P 500, CAC 40 GR), fiscalité
+│   │   ├── pea.js             PEA : indices, fiscalité, catalogue d'ETF, projection mensuelle
+│   │   ├── pea-view.js        Cartes « PEA » : lignes d'ETF, plus-value, fiscalité, projection
 │   │   ├── widgets.js         Widgets du tableau de bord (bulletin, comparateur, projection…)
 │   │   ├── format.js          Mise en forme partagée (euros, %, badges)
 │   │   └── epargne-view.js    Écran « Épargne » (livrets, virements à rattacher, widgets, taux)
@@ -199,6 +200,14 @@ npx vercel --prod     # mise en ligne
   (avant 5 ans : 31,4 % des gains et clôture ; après : 18,6 % de prélèvements
   sociaux), comparée au compte-titres. Un tableau de bord déjà personnalisé
   reçoit les nouveaux widgets à la fin (réglage `epargneWidgetsKnown`).
+- **Votre PEA** (« Ajouter un PEA », un par personne, réglage `peaAccounts`) :
+  mois d'ouverture, valeur de chaque ligne d'ETF (catalogue `ETFS` de `pea.js`
+  ou « Autre ETF » rattaché à l'indice le plus proche), frais, total versé et
+  versement mensuel. La carte affiche plafond des versements, plus-value
+  latente, date de la fiscalité allégée et frais ; la projection (5, 10 ou
+  20 ans) se calcule mois par mois avec un versement mensuel modifiable sur
+  place, selon trois hypothèses (passé 10 ans, prudent 5 %, pessimiste 2 %,
+  frais déduits), puis donne les prélèvements et le net au retrait.
 - Valeurs de référence des widgets, à rafraîchir de temps en temps dans
   `livret-rates.js` : `INFLATION_INDICES` (IPCH, sous-jacente), `ANNUAL_INFLATION`
   (moyenne de chaque année, en janvier), `BENCHMARKS` (fonds euros chaque début

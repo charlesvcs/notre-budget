@@ -5,7 +5,9 @@
  */
 import { Workbook, colName, excelDate } from '../export/xlsx-writer.js';
 import { benchmarks, grossEquivalent, history } from './indicators.js';
-import { INDEX_RETURNS, PEA, yearsOf } from './pea.js';
+import {
+  INDEX_RETURNS, PEA, SCENARIOS, indexById, portfolio, projectPea, scenarioRate, yearsOf,
+} from './pea.js';
 import { PRODUCTS, SAFETY_MONTHS, TAX } from './livret-rates.js';
 import { INSEE_SERIES, SOURCES } from './live-data.js';
 import { bulletinItems } from './widgets.js';
@@ -335,6 +337,55 @@ export function buildEpargneWorkbook(ctx, data) {
   fis.row([]);
   fis.row([{ v: `Seuls les gains sont imposés, au retrait. Avant ${PEA.years} ans : ${TAX.pfu.toLocaleString('fr-FR')} % (${TAX.incomeTax.toLocaleString('fr-FR')} % d'impôt + ${TAX.social.toLocaleString('fr-FR')} % de prélèvements sociaux) et clôture du plan. Après ${PEA.years} ans : ${TAX.social.toLocaleString('fr-FR')} % de prélèvements sociaux. Plafond des versements : ${(PEA.cap / 100).toLocaleString('fr-FR')} €. Compte-titres simplifié : imposé au retrait.`, s: 'note' }]);
   fis.merge(`A${fis.rows.length}:G${fis.rows.length}`);
+
+  // ——— Vos PEA : lignes et projection ——————————————————————————————
+  for (const account of ctx.pea ?? []) {
+    const pf = portfolio(account, ctx.ref.annual);
+    const owner = ctx.pea.length > 1 ? ` ${ctx.names[account.profile] ?? account.profile}` : '';
+    const sh = wb.addSheet(`PEA${owner}`.slice(0, 31), { widths: [34, 16, 14, 10, 14, 12, 16] });
+    sh.row([{ v: `PEA${owner} — ouvert en ${monthLong(account.opened)}`, s: 'title' }]);
+    sh.row([{ v: `Valeur saisie le ${longDate(account.date)}. Rendement passé = moyenne 10 ans de l'indice suivi (en euros, dividendes réinvestis).`, s: 'note' }]);
+    sh.blank();
+    const head = sh.row(['ETF', 'ISIN', 'Indice', 'Frais', 'Montant', 'Part', 'Rendement passé'], 'header');
+    const first = head + 1;
+    pf.lines.forEach((l, k) => {
+      const n = first + k;
+      sh.row([l.ticker ? `${l.ticker} · ${l.name}` : l.name, l.isin, indexById.get(l.index)?.name ?? '', { v: frac(l.ter), s: 'percent' },
+        { v: eur(l.amount), s: 'euro' }, { f: `E${n}/SUM($E$${first}:$E$${first + pf.lines.length - 1})`, v: l.weight, s: 'percent' }, { v: l.past, s: 'percent' }]);
+    });
+    const last = first + pf.lines.length - 1;
+    sh.row([{ v: 'Total', s: 'boldTotal' }, { v: '', s: 'boldTotal' }, { v: '', s: 'boldTotal' },
+      { f: `SUMPRODUCT(D${first}:D${last},F${first}:F${last})`, v: frac(pf.ter), s: 'percentBold' },
+      { f: `SUM(E${first}:E${last})`, v: eur(pf.value), s: 'euroTotal' }, { v: 1, s: 'percentBold' },
+      { f: `SUMPRODUCT(G${first}:G${last},F${first}:F${last})`, v: pf.past, s: 'percentBold' }]);
+    sh.blank();
+    sh.row(['Total versé depuis l\'ouverture', { v: eur(pf.deposits), s: 'euro' }, account.deposits == null ? 'inconnu : valeur actuelle retenue' : '']);
+    const sim = ctx.peaSim?.(account.id) ?? { monthly: account.monthly ?? 0, horizon: 10, scenario: 'prudent' };
+    const chosen = SCENARIOS.find((x) => x.id === sim.scenario) ?? SCENARIOS[1];
+    const rate = scenarioRate(pf, chosen.id);
+    sh.row(['Rendement annuel retenu (net de frais)', { v: rate, s: 'percentBold' }, `Hypothèse « ${chosen.label} »`]);
+    sh.row(['Versement mensuel', { v: eur(sim.monthly), s: 'euro' }, 'en début de mois, jusqu\'au plafond']);
+    sh.blank();
+    const ph = sh.row(['Dans (ans)', 'Valeur prévue', 'Total versé', 'Gains', 'En euros d\'aujourd\'hui'], 'header');
+    const { points, final } = projectPea({
+      value: pf.value, deposits: pf.deposits, monthly: sim.monthly, rate, years: sim.horizon, opened: account.opened, start: ctx.today.slice(0, 7), inflation: inflation.rate,
+    });
+    points.forEach((pt, k) => {
+      const n = ph + 1 + k;
+      sh.row([{ v: pt.year, s: 'number' }, { v: eur(pt.value), s: 'euro' }, { v: eur(pt.deposits), s: 'euro' },
+        { f: `B${n}-C${n}`, v: eur(pt.value - pt.deposits), s: 'euro' }, { v: eur(pt.real), s: 'euro' }]);
+    });
+    const pl = ph + points.length;
+    sh.blank();
+    sh.row([`Prélèvements au retrait dans ${sim.horizon} ans (${final.taxRate.toLocaleString('fr-FR')} % des gains)`, { f: `MAX(0,D${pl})*${(final.taxRate / 100).toFixed(3)}`, v: eur(final.tax), s: 'euro' }]);
+    sh.row([{ v: 'Net après retrait', s: 'boldTotal' }, { f: `B${pl}-B${pl + 2}`, v: eur(final.net), s: 'euroTotal' }]);
+    sh.row([]);
+    sh.row([{ v: 'Valeurs calculées mois par mois dans l\'app, avec le rendement et le versement ci-dessus. Rendement supposé constant : un ordre de grandeur, pas une promesse.', s: 'note' }]);
+    sh.chart({
+      type: 'col', title: 'Projection du PEA (€)', from: `G${ph}`, to: `N${ph + 18}`, categories: `A${ph + 1}:A${pl}`,
+      series: [{ name: 'Valeur prévue', ref: `B${ph + 1}:B${pl}`, color: ROSE }, { name: 'Total versé', ref: `C${ph + 1}:C${pl}`, color: LIN }],
+    });
+  }
 
   // ——— Taux ——————————————————————————————————————————————————————
   const tx = wb.addSheet('Taux', { widths: [16, 12, 12, 22], freeze: 1 });

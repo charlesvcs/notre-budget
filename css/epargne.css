@@ -45,6 +45,7 @@
 
 .savings input[type="text"],
 .savings input[type="date"],
+.savings input[type="month"],
 .savings select { width: 100%; }
 
 /* ——— Premier lancement ——— */
@@ -322,6 +323,39 @@
 
 .sv-edit__wide { grid-column: 1 / -1; }
 
+/* ——— PEA ——— */
+
+.sv-pea-list { display: grid; gap: 20px; }
+.sv-pea .sv-stats { grid-template-columns: repeat(auto-fit, minmax(16em, 1fr)); column-gap: 24px; }
+.sv-pea__sim { display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid var(--border); }
+.sv-pea__controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; }
+.sv-pea__monthly { width: 12em; }
+.sv-pea__results { display: grid; gap: 14px; }
+.sv-pea__results > .card__hint { margin: 0; max-width: 75ch; }
+.sv-pea__results .sv-legend { margin-top: 0; }
+
+.sv-pea__form { display: grid; gap: 14px; }
+.sv-pea__form .card__head { margin: 0; }
+.sv-pea__lines-title { margin: 4px 0 -4px; font-weight: 700; }
+.sv-pea__lines { display: grid; gap: 10px; }
+
+.sv-pea__line {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr) minmax(0, 0.8fr) 36px;
+  align-items: end;
+  gap: 10px 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.sv-pea__line .icon-btn { margin-bottom: 2px; }
+.sv-pea__line:only-of-type .js-remove { visibility: hidden; }
+.sv-pea__other { grid-column: span 2; }
+.sv-pea__other[hidden] { display: none; }
+
 /* ——— Projection ———
    Aujourd'hui en plein (bleu épargne), les fins d'année projetées en hachure,
    et un trait pour ce que le solde vaudra en euros d'aujourd'hui. */
@@ -394,6 +428,7 @@
 .sv-col:hover .sv-col__value,
 .sv-col:focus-visible .sv-col__value { display: block; }
 .sv-col.is-last .sv-col__value { right: 0; }
+.sv-col.is-today .sv-col__value { left: 0; }
 
 .sv-chart__labels {
   margin-top: 6px;
@@ -812,6 +847,11 @@
   .sv-rates__head { grid-template-columns: minmax(0, 1fr); }
   .sv-rate__rail { grid-column: 1 / -1; grid-row: 2; }
   .sv-edit__fields { grid-template-columns: minmax(0, 1fr); }
+  .sv-pea__line { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; }
+  .sv-pea__etf { grid-column: 1 / 3; }
+  .sv-pea__line .js-remove { grid-column: 3; grid-row: 1; }
+  .sv-pea__other { grid-column: 1 / -1; }
+  .sv-pea__monthly { width: 100%; }
   .sv-move { grid-template-columns: 3.6em minmax(0, 1fr) auto; }
   .sv-move__action { grid-column: 2 / -1; justify-self: start; }
   .sv-chart__labels { font-size: 0.72rem; }

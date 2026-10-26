@@ -20,6 +20,7 @@ import {
   DEFAULT_WIDGETS, LEGACY_WIDGETS, WIDGETS, monthsOf, safetyVerdict, verdictTag, widgetById,
 } from './widgets.js';
 import { globalAverage } from './pea.js';
+import { mountPeaSection } from './pea-view.js';
 import {
   asDate, h, longDate, money, moneyExact, monthLong, pct, pct1, pctOf, realBadge, setWidths, signedMoney, gainBadge,
 } from './format.js';
@@ -111,6 +112,7 @@ export function mountEpargneView(root = document) {
   };
 
   const nameOf = (profile) => state.profileNames[profile] ?? profile;
+  const peaSection = mountPeaSection({ container: $('sv-pea'), addButton: $('sv-pea-add'), notify: (text, undo) => showNotice(text, undo) });
   const activeHolders = () => {
     const set = new Set([...state.activeProfiles.filter((p) => HOLDERS.includes(p)), ...state.livrets.map((l) => l.profile)]);
     return HOLDERS.filter((p) => set.has(p));
@@ -128,7 +130,7 @@ export function mountEpargneView(root = document) {
       getLivrets(), getCategories({ includeArchived: true }), getProfileNames(), getActiveProfiles(), getSetting('livretRates'),
       getSetting('inflation'), getSetting('livretAssign'), getEarliestMonth(), getSetting('epargneWidgets'), getSetting('epargneWidgetsKnown'),
       Promise.all(recentMonths.map(getTransactionsByMonth)).then((lists) => lists.flat()),
-      getSetting('donneesOfficielles'), getSetting('donneesAuto'),
+      getSetting('donneesOfficielles'), getSetting('donneesAuto'), peaSection.load(),
     ]);
     state.livrets = livrets.sort((a, b) => HOLDERS.indexOf(a.profile) - HOLDERS.indexOf(b.profile)
       || Object.keys(PRODUCTS).indexOf(a.product) - Object.keys(PRODUCTS).indexOf(b.product));
@@ -202,6 +204,9 @@ export function mountEpargneView(root = document) {
       renderBoard();
     }
     renderLivrets();
+    peaSection.update({
+      today: state.today, inflation: state.inflation.rate, annual: state.ref.annual, holders: activeHolders(), nameOf, solo: isSolo(), animate: state.animate,
+    });
     renderUnmatched();
     renderParams();
     state.animate = false;
@@ -679,7 +684,7 @@ export function mountEpargneView(root = document) {
       const projection = state.livrets.map((livret) => buildLivretModel({
         livret, flows: state.flows.get(livret.id) ?? [], rates: state.rates, today: state.today, inflation: state.inflation.rate, horizon: 10,
       }));
-      const ctx = { ...widgetContext(), names: state.profileNames };
+      const ctx = { ...widgetContext(), names: state.profileNames, pea: peaSection.accounts(), peaSim: peaSection.simOf };
       const workbook = buildEpargneWorkbook(ctx, { flows: state.flows, projection, spending: await spendingByMonth() });
       download(new File([workbook.toBlob()], `mon-budget-epargne-${state.today}.xlsx`, {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

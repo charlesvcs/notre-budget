@@ -122,3 +122,101 @@ export function globalAverage(count, inflation = {}, list = INDEX_RETURNS) {
   const avg = (key) => stats.reduce((s, x) => s + x[key], 0) / stats.length;
   return { cagr: avg('cagr'), real: stats.every((s) => s.real != null) ? avg('real') : null, from: stats[0].from, to: stats[0].to, years: stats[0].years };
 }
+
+// ——— Votre PEA : lignes d'ETF et projection ————————————————————————————
+
+/**
+ * ETF éligibles au PEA les plus répandus. Frais courants (TER) en % par an, d'après les
+ * émetteurs à l'automne 2026 : modifiables ligne par ligne, ils changent de temps en temps.
+ */
+export const ETFS = [
+  { id: 'dcam', ticker: 'DCAM', name: 'Amundi PEA Monde (MSCI World)', isin: 'FR001400U5Q4', index: 'world', ter: 0.2 },
+  { id: 'wpea', ticker: 'WPEA', name: 'iShares MSCI World Swap PEA', isin: 'IE0002XZSHO1', index: 'world', ter: 0.2 },
+  { id: 'cw8', ticker: 'CW8', name: 'Amundi MSCI World', isin: 'LU1681043599', index: 'world', ter: 0.38 },
+  { id: 'ese', ticker: 'ESE', name: 'BNP Paribas Easy S&P 500', isin: 'FR0011550185', index: 'sp500', ter: 0.12 },
+  { id: 'psp5', ticker: 'PSP5', name: 'Amundi PEA S&P 500', isin: 'FR0011871128', index: 'sp500', ter: 0.15 },
+  { id: 'c40', ticker: 'C40', name: 'Amundi CAC 40', isin: 'FR0007052782', index: 'cac40', ter: 0.25 },
+];
+export const OTHER_ETF = 'autre';
+export const etfById = new Map(ETFS.map((e) => [e.id, e]));
+export const indexById = new Map(INDEX_RETURNS.map((i) => [i.id, i]));
+
+/** Hypothèses de rendement des actions, avant frais des ETF. */
+export const SCENARIOS = [
+  { id: 'passe', label: 'Passé 10 ans', text: 'le rendement moyen de vos indices sur les 10 dernières années' },
+  { id: 'prudent', label: 'Prudent 5 %', rate: 5, text: '5 % par an, une hypothèse prudente pour les actions mondiales' },
+  { id: 'pessimiste', label: 'Pessimiste 2 %', rate: 2, text: '2 % par an, à peine au-dessus de l\'inflation' },
+];
+
+/** Une ligne enregistrée { etf, name?, index?, ter, amount } complétée par le catalogue. */
+export function lineInfo(line) {
+  const etf = etfById.get(line.etf);
+  return {
+    ...line,
+    name: etf?.name ?? (line.name || 'Autre ETF'),
+    ticker: etf?.ticker ?? '',
+    isin: etf?.isin ?? '',
+    index: etf?.index ?? line.index ?? 'world',
+    ter: line.ter ?? etf?.ter ?? 0,
+  };
+}
+
+/**
+ * Le portefeuille d'un PEA : valeur, poids de chaque ligne, frais moyens et rendement
+ * passé des indices suivis (moyenne pondérée sur 10 ans, en fraction).
+ */
+export function portfolio(account, inflation = {}) {
+  const lines = (account.lines ?? []).map(lineInfo);
+  const value = lines.reduce((s, l) => s + l.amount, 0);
+  const weight = (l) => (value > 0 ? l.amount / value : 1 / lines.length);
+  const withWeights = lines.map((l) => ({ ...l, weight: weight(l), past: indexStats(indexById.get(l.index), 10, inflation).cagr }));
+  const avg = (key) => withWeights.reduce((s, l) => s + l.weight * l[key], 0);
+  return {
+    value,
+    deposits: account.deposits ?? value,
+    lines: withWeights,
+    ter: lines.length ? avg('ter') : 0, // en %
+    past: lines.length ? avg('past') : 0, // fraction
+  };
+}
+
+/** Rendement annuel net de frais (fraction) retenu pour un scénario. */
+export function scenarioRate(pf, scenarioId) {
+  const scenario = SCENARIOS.find((s) => s.id === scenarioId) ?? SCENARIOS[0];
+  return (scenario.rate == null ? pf.past : scenario.rate / 100) - pf.ter / 100;
+}
+
+/** Mois écoulés entre deux mois « YYYY-MM ». */
+export const monthsBetween = (from, to) => {
+  const [y1, m1] = from.split('-').map(Number);
+  const [y2, m2] = to.split('-').map(Number);
+  return (y2 - y1) * 12 + (m2 - m1);
+};
+
+/**
+ * Projection mois par mois : versement en début de mois (jusqu'au plafond des versements),
+ * puis croissance au taux mensuel équivalent. Un point par année écoulée.
+ * À l'horizon : gains imposés selon l'âge du plan, valeur nette et en euros d'aujourd'hui.
+ */
+export function projectPea({ value, deposits, monthly, rate, years, opened, start, inflation = 0 }) {
+  const monthlyRate = (1 + rate) ** (1 / 12) - 1;
+  let v = value;
+  let d = deposits;
+  const points = [{ year: 0, value: v, deposits: d, real: v }];
+  for (let k = 1; k <= years * 12; k++) {
+    const add = Math.max(0, Math.min(monthly, PEA.cap - d));
+    v = (v + add) * (1 + monthlyRate);
+    d += add;
+    if (k % 12 === 0) points.push({ year: k / 12, value: Math.round(v), deposits: d, real: Math.round(v / (1 + inflation / 100) ** (k / 12)) });
+  }
+  const end = points.at(-1);
+  const age = (monthsBetween(opened, start) + years * 12) / 12;
+  const taxRate = peaTax(age);
+  const gains = end.value - end.deposits;
+  const tax = Math.round(Math.max(0, gains) * taxRate / 100);
+  const net = end.value - tax;
+  return {
+    points,
+    final: { ...end, gains, taxRate, tax, net, netReal: Math.round(net / (1 + inflation / 100) ** years), age, capped: end.deposits >= PEA.cap },
+  };
+}

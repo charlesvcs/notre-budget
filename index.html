@@ -262,11 +262,12 @@
       <header class="savings__head">
         <div>
           <h1 id="sv-title">Épargne</h1>
-          <p class="savings__lede">Vos livrets, leurs intérêts, et ce qu'ils valent vraiment une fois l'inflation passée.</p>
+          <p class="savings__lede">Vos livrets et votre PEA : ce qu'ils rapportent, ce qu'ils valent vraiment une fois l'inflation passée, et où ils vous mènent.</p>
         </div>
         <div class="savings__actions">
           <button type="button" class="btn btn--ghost btn--small" id="sv-export" hidden>Exporter en Excel</button>
           <button type="button" class="btn btn--ghost btn--small" id="sv-add" hidden>Ajouter un livret</button>
+          <button type="button" class="btn btn--ghost btn--small" id="sv-pea-add" hidden>Ajouter un PEA</button>
         </div>
       </header>
 
@@ -308,6 +309,9 @@
       </article>
 
       <div class="sv-grid" id="sv-livrets"></div>
+
+      <!-- PEA : lignes d'ETF saisies par vous, projection avec versement mensuel -->
+      <div class="sv-pea-list" id="sv-pea" hidden></div>
 
       <article class="card" id="sv-unmatched-card" aria-labelledby="sv-unmatched-title" hidden>
         <header class="card__head">

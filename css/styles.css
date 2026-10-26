@@ -129,6 +129,7 @@ body {
 /* ——— Champs ——— */
 input[type="text"],
 input[type="date"],
+input[type="month"],
 select {
   font: inherit;
   font-size: 0.95rem;

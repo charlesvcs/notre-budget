@@ -11,8 +11,9 @@ import {
 import { normalizeLabel } from '../import/categorizer.js';
 import { buildLivretModel, livretKeywords, matchFlows, summarize } from './livret-model.js';
 import {
-  LIVRET_COLORS, OFFICIAL_INFLATION, PRODUCTS, currentInflation, mergeRates, referenceData,
+  LIVRET_COLORS, OFFICIAL_INFLATION, PRODUCTS, currentInflation, mergeRates, rateOn, referenceData,
 } from './livret-rates.js';
+import { marketAssumptions } from './objectifs.js';
 import { SOURCES, isStale, refreshOfficialData } from './live-data.js';
 import { monthlyExpenses, realRate, safetyNet } from './indicators.js';
 import { buildEpargneWorkbook } from './export.js';
@@ -679,7 +680,11 @@ export function mountEpargneView(root = document) {
       const projection = state.livrets.map((livret) => buildLivretModel({
         livret, flows: state.flows.get(livret.id) ?? [], rates: state.rates, today: state.today, inflation: state.inflation.rate, horizon: 10,
       }));
-      const ctx = { ...widgetContext(), names: state.profileNames, pea: (await getSetting('peaAccounts')) ?? [] };
+      const [peaAccounts, goals] = await Promise.all([getSetting('peaAccounts'), getSetting('objectifs')]);
+      const market = marketAssumptions({
+        accounts: peaAccounts ?? [], annual: state.ref.annual, livretA: rateOn(state.rates, 'livretA', state.today) / 100, month: state.today.slice(0, 7),
+      });
+      const ctx = { ...widgetContext(), names: state.profileNames, pea: peaAccounts ?? [], goals: goals ?? [], market };
       const workbook = buildEpargneWorkbook(ctx, { flows: state.flows, projection, spending: await spendingByMonth() });
       download(new File([workbook.toBlob()], `mon-budget-epargne-${state.today}.xlsx`, {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

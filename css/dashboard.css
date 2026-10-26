@@ -28,38 +28,6 @@
 
 .app-bar__brand img { border-radius: 9px; }
 
-/* Onglets en pilules : l'actif en violet plein */
-.app-bar__nav {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 999px;
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.app-bar__nav a {
-  padding: 8px 16px;
-  border-radius: 999px;
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 0.92rem;
-  text-decoration: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.app-bar__nav a:hover { color: var(--accent-strong); background: var(--accent-soft); }
-
-.app-bar__nav a[aria-current="page"] {
-  background: var(--accent-strong);
-  color: #FFFFFF;
-  box-shadow: 0 4px 12px rgb(108 71 255 / 0.3);
-}
-
-@media (prefers-color-scheme: dark) {
-  .app-bar__nav a[aria-current="page"] { color: #120E22; box-shadow: none; }
-}
-
 /* ——— Mise en page du mois ——— */
 
 .dash {
@@ -1124,7 +1092,6 @@
 }
 
 @media (max-width: 560px) {
-  .app-bar__brand span { display: none; }
   .dash__toolbar { flex-direction: column; align-items: stretch; }
   .month-nav { justify-content: space-between; }
   .month-nav h1 { flex: 1; }

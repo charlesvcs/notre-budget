@@ -5,7 +5,7 @@
  *
  * Pour publier une nouvelle version : incrémenter CACHE_VERSION.
  */
-const CACHE_VERSION = 'v47';
+const CACHE_VERSION = 'v48';
 const CACHE_NAME = `mon-budget-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -17,7 +17,9 @@ const APP_SHELL = [
   './css/import.css',
   './css/backup.css',
   './css/epargne.css',
+  './css/menu.css',
   './js/app.js',
+  './js/menu.js',
   './js/db/schema.js',
   './js/db/seed.js',
   './js/db/database.js',

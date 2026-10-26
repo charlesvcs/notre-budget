@@ -8,21 +8,18 @@ import {
   getActiveProfiles, getProfileNames, getSetting, setSetting, toCents,
 } from '../db/database.js';
 import { currentInflation, mergeRates, rateOn, referenceData } from './livret-rates.js';
-import { PEA, globalAverage, monthsBetween, portfolio } from './pea.js';
-import { CRASH, confront } from './objectifs.js';
+import { PEA, portfolio } from './pea.js';
+import {
+  CRASH, EQUITY_CHOICES, confront, marketAssumptions,
+} from './objectifs.js';
 import { mountPeaSection } from './pea-view.js';
+import { buildInvestWorkbook } from './export.js';
+import { download } from '../backup/backup-core.js';
 import { peaWidget, verdictTag } from './widgets.js';
 import { gainBadge, h, money, monthLong, pct1, pctOf, setWidths } from './format.js';
 
 const HOLDERS = [PROFILES.ME, PROFILES.PARTNER];
 const decimal = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
-/** Frais des ETF retenus pour les stratégies quand aucun PEA n'est saisi (ETF monde éligibles PEA). */
-const DEFAULT_TER = 0.2;
-const EQUITY_CHOICES = [
-  { id: 'prudent', label: 'Actions à 5 %', text: '5 % par an pour les actions, une hypothèse prudente' },
-  { id: 'passe', label: 'Actions comme les 10 dernières années', text: 'le rendement moyen des indices mondiaux sur 10 ans' },
-];
-
 export function mountInvestissementView(root = document) {
   const $ = (id) => root.getElementById(id);
   const el = {
@@ -40,6 +37,7 @@ export function mountInvestissementView(root = document) {
     marketNote: $('inv-market-note'),
     reference: $('inv-reference'),
     referenceHint: $('inv-reference-hint'),
+    exportBtn: $('inv-export'),
   };
 
   const state = {
@@ -104,17 +102,9 @@ export function mountInvestissementView(root = document) {
 
   // ——— Hypothèses de marché ————————————————————————————————————————————
 
-  /** Rendements retenus pour les stratégies : actions (frais déduits), livrets, âge du PEA. */
-  function market() {
-    const accounts = pea.accounts();
-    const pfs = accounts.map((a) => portfolio(a, state.ref.annual));
-    const value = pfs.reduce((s, p) => s + p.value, 0);
-    const ter = value > 0 ? pfs.reduce((s, p) => s + p.ter * p.value, 0) / value : DEFAULT_TER;
-    const gross = state.equity === 'passe' ? globalAverage(10, state.ref.annual).cagr : 0.05;
-    const month = state.today.slice(0, 7);
-    const peaAge = accounts.length ? Math.max(...accounts.map((a) => monthsBetween(a.opened, month))) : 0;
-    return { equityRate: gross - ter / 100, gross, ter, safeRate: state.livretA, peaAge, hasPea: accounts.length > 0 };
-  }
+  const market = () => marketAssumptions({
+    accounts: pea.accounts(), annual: state.ref.annual, equity: state.equity, livretA: state.livretA, month: state.today.slice(0, 7),
+  });
 
   function renderMarket() {
     const field = h('fieldset', 'segmented');
@@ -347,6 +337,29 @@ export function mountInvestissementView(root = document) {
     body.replaceChildren();
     peaWidget.render(body, ctx);
   }
+
+  // ——— Export Excel ————————————————————————————————————————————————————
+
+  el.exportBtn.addEventListener('click', () => {
+    el.exportBtn.disabled = true;
+    el.exportBtn.textContent = 'Préparation…';
+    try {
+      const workbook = buildInvestWorkbook({
+        ref: state.ref, pea: pea.accounts(), names: state.names, today: state.today, inflation: state.inflation,
+        goals: state.goals, market: market(), peaSim: pea.simOf,
+      });
+      download(new File([workbook.toBlob()], `mon-budget-investissement-${state.today}.xlsx`, {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }));
+      showNotice('Classeur Excel prêt : il est dans vos téléchargements.');
+    } catch (err) {
+      console.error('[export] Échec :', err);
+      showNotice('L\'export n\'a pas abouti. Réessayez, ou rechargez la page.');
+    } finally {
+      el.exportBtn.disabled = false;
+      el.exportBtn.textContent = 'Exporter en Excel';
+    }
+  });
 
   // ——— Messages ————————————————————————————————————————————————————————
 

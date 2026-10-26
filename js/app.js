@@ -5,18 +5,17 @@ import { mountBackupView } from './backup/backup-view.js';
 import { mountEpargneView } from './epargne/epargne-view.js';
 import { mountInvestissementView } from './epargne/investissement-view.js';
 import { startAutoBackup } from './backup/backup-core.js';
+import { mountMenu } from './menu.js';
 
 const ROUTES = ['mois', 'epargne', 'investir', 'importer', 'sauvegarde'];
 
 /** Navigation par ancre : #/mois (par défaut), #/epargne, #/investir, #/importer ou #/sauvegarde. */
 function startRouter(dashboard, epargne, investir, backup) {
+  const menu = mountMenu();
   const show = () => {
     const route = ROUTES.find((r) => location.hash === `#/${r}`) ?? 'mois';
     document.querySelectorAll('[data-view]').forEach((v) => { v.hidden = v.dataset.view !== route; });
-    document.querySelectorAll('[data-route]').forEach((a) => {
-      if (a.dataset.route === route) a.setAttribute('aria-current', 'page');
-      else a.removeAttribute('aria-current');
-    });
+    menu.setCurrent(route);
     if (route === 'mois') dashboard.show();
     if (route === 'epargne') epargne.show();
     if (route === 'investir') investir.show();

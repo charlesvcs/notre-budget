@@ -9,7 +9,9 @@
  * l'objectif, le versement mensuel nécessaire, et la perte possible si une année comme
  * 2008 (près de −40 % pour les actions mondiales) survenait juste avant l'échéance.
  */
-import { PEA, peaTax } from './pea.js';
+import {
+  PEA, globalAverage, monthsBetween, peaTax, portfolio,
+} from './pea.js';
 
 export const STRATEGIES = [
   { id: 'livrets', name: 'Livrets', equity: 0, text: 'Livret A et LEP : disponible à tout moment, sans risque ni impôt.' },
@@ -117,4 +119,26 @@ export function confront(goal, market, month) {
     };
   });
   return { months, years: months / 12, suggested, rows };
+}
+
+/** Frais des ETF retenus quand aucun PEA n'est saisi (ETF monde éligibles au PEA), en %. */
+export const DEFAULT_TER = 0.2;
+
+export const EQUITY_CHOICES = [
+  { id: 'prudent', label: 'Actions à 5 %', text: '5 % par an pour les actions, une hypothèse prudente' },
+  { id: 'passe', label: 'Actions comme les 10 dernières années', text: 'le rendement moyen des indices mondiaux sur 10 ans' },
+];
+
+/**
+ * Hypothèses de marché des stratégies : actions (frais de vos ETF déduits, sinon 0,2 %),
+ * livrets au taux du Livret A, âge du plus ancien PEA (pour la fiscalité au retrait).
+ * @param {object} o { accounts, annual, equity: 'prudent' | 'passe', livretA (fraction), month 'YYYY-MM' }
+ */
+export function marketAssumptions({ accounts = [], annual, equity = 'prudent', livretA, month }) {
+  const pfs = accounts.map((a) => portfolio(a, annual));
+  const value = pfs.reduce((s, p) => s + p.value, 0);
+  const ter = value > 0 ? pfs.reduce((s, p) => s + p.ter * p.value, 0) / value : DEFAULT_TER;
+  const gross = equity === 'passe' ? globalAverage(10, annual).cagr : 0.05;
+  const peaAge = accounts.length ? Math.max(...accounts.map((a) => monthsBetween(a.opened, month))) : 0;
+  return { equity, equityRate: gross - ter / 100, gross, ter, safeRate: livretA, peaAge, hasPea: accounts.length > 0 };
 }

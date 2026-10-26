@@ -25,10 +25,12 @@ Finance/
 ├── css/
 │   ├── styles.css         Tokens (clair/sombre), champs, boutons
 │   ├── dashboard.css      Barre d'app, tableau de bord du mois
-│   ├── epargne.css        Écran « Épargne » (livrets)
+│   ├── epargne.css        Écrans « Épargne » et « Investir »
+│   ├── menu.css           Menu principal (bouton burger, panneau, animations)
 │   └── import.css         Zone de dépôt + tableau de validation
 ├── js/
 │   ├── app.js             Démarrage : service worker, base, navigation #/mois · #/epargne · #/investir · #/importer · #/sauvegarde
+│   ├── menu.js            Menu principal : bouton pilule + panneau de tuiles (ouverture animée, clavier, Échap)
 │   ├── backup/
 │   │   ├── backup-core.js     Chiffrement AES-GCM, sauvegarde automatique, partage
 │   │   └── backup-view.js     Onglet « Sauvegarde » (mot de passe, AirDrop, restauration)
@@ -219,6 +221,9 @@ npx vercel --prod     # mise en ligne
   sous 3 ans, prudente 3–5, équilibrée 5–8, dynamique au-delà). Actions à 5 %
   par an ou au rendement des 10 dernières années, frais des ETF déduits ;
   livrets au taux du Livret A.
+- **Export Excel de l'onglet « Investir »** : indices, fiscalité du PEA, une
+  feuille par PEA et une feuille « Objectifs » (chaque objectif face aux quatre
+  stratégies, écart en formule). L'export « Épargne » contient aussi ces feuilles.
 - **Repères** (onglet « Investir ») : rendement des indices et fiscalité du PEA
   (ex-widget « PEA » de l'écran Épargne).
 - Valeurs de référence des widgets, à rafraîchir de temps en temps dans

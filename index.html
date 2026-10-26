@@ -29,6 +29,7 @@
   <link rel="stylesheet" href="css/import.css">
   <link rel="stylesheet" href="css/backup.css">
   <link rel="stylesheet" href="css/epargne.css">
+  <link rel="stylesheet" href="css/menu.css">
 </head>
 <body>
   <header class="app-bar">
@@ -36,14 +37,47 @@
       <img src="icons/icon.svg" width="28" height="28" alt="">
       <span>Mon Budget</span>
     </a>
-    <nav class="app-bar__nav" aria-label="Sections">
-      <a href="#/mois" data-route="mois">Le mois</a>
-      <a href="#/epargne" data-route="epargne">Épargne</a>
-      <a href="#/investir" data-route="investir" title="Investissement">Investir</a>
-      <a href="#/importer" data-route="importer">Importer</a>
-      <a href="#/sauvegarde" data-route="sauvegarde">Sauvegarde</a>
-    </nav>
+    <button type="button" class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="menu-panel" data-route="mois">
+      <span class="menu-btn__dot" aria-hidden="true"></span>
+      <span class="menu-btn__label" id="menu-current">Le mois</span>
+      <span class="menu-btn__burger" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="visually-hidden"> — menu</span>
+    </button>
   </header>
+
+  <!-- Menu principal : s'ouvre depuis le bouton pilule de la barre -->
+  <div class="menu-backdrop" id="menu-backdrop" aria-hidden="true"></div>
+  <nav class="menu-panel" id="menu-panel" aria-label="Sections">
+    <p class="menu-panel__title">Où allons-nous ?</p>
+    <ul class="menu-list">
+        <li><a class="menu-item" href="#/mois" data-route="mois">
+          <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>
+          <span class="menu-item__text"><strong>Le mois</strong><small>Reste à vivre, enveloppes, opérations</small></span>
+          <span class="menu-item__here">Ici</span>
+        </a></li>
+        <li><a class="menu-item" href="#/epargne" data-route="epargne">
+          <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="6.5" rx="7" ry="3"/><path d="M5 6.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/><path d="M5 11.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
+          <span class="menu-item__text"><strong>Épargne</strong><small>Livrets, intérêts, matelas de sécurité</small></span>
+          <span class="menu-item__here">Ici</span>
+        </a></li>
+        <li><a class="menu-item" href="#/investir" data-route="investir">
+          <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>
+          <span class="menu-item__text"><strong>Investissement</strong><small>PEA, objectifs et stratégies</small></span>
+          <span class="menu-item__here">Ici</span>
+        </a></li>
+        <li><a class="menu-item" href="#/importer" data-route="importer">
+          <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9.5 14.5 12 12l2.5 2.5"/></svg></span>
+          <span class="menu-item__text"><strong>Importer</strong><small>Relevés PDF de votre banque</small></span>
+          <span class="menu-item__here">Ici</span>
+        </a></li>
+        <li><a class="menu-item" href="#/sauvegarde" data-route="sauvegarde">
+          <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+          <span class="menu-item__text"><strong>Sauvegarde</strong><small>Chiffrée, vers l'iPhone par AirDrop</small></span>
+          <span class="menu-item__here">Ici</span>
+        </a></li>
+    </ul>
+    <p class="menu-panel__foot">100 % local · vos données restent sur cet appareil</p>
+  </nav>
 
   <main id="app">
 
@@ -266,6 +300,7 @@
           <p class="savings__lede">Vos portefeuilles, vos objectifs, et ce que chaque stratégie permet d'en attendre.</p>
         </div>
         <div class="savings__actions">
+          <button type="button" class="btn btn--ghost btn--small" id="inv-export">Exporter en Excel</button>
           <button type="button" class="btn btn--ghost btn--small" id="inv-pea-add" hidden>Ajouter un PEA</button>
           <button type="button" class="btn btn--ghost btn--small" id="inv-goal-add">Ajouter un objectif</button>
         </div>

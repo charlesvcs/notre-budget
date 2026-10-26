@@ -8,6 +8,7 @@ import { benchmarks, grossEquivalent, history } from './indicators.js';
 import {
   INDEX_RETURNS, PEA, SCENARIOS, indexById, portfolio, projectPea, scenarioRate, yearsOf,
 } from './pea.js';
+import { CRASH, EQUITY_CHOICES, STRATEGIES, confront } from './objectifs.js';
 import { PRODUCTS, SAFETY_MONTHS, TAX } from './livret-rates.js';
 import { INSEE_SERIES, SOURCES } from './live-data.js';
 import { bulletinItems } from './widgets.js';
@@ -20,6 +21,20 @@ const ENCRE = '1B1530';
 const ROSE = 'F0509A';
 
 const eur = (cents) => Math.round(cents) / 100;
+
+const INVEST_SOURCES = [
+    ['MSCI World (EUR), performances nettes', 'https://www.msci.com/documents/10199/890dd84d-3750-4656-87f2-1229ed5a5d6e'],
+    ['MSCI ACWI (EUR), performances nettes', 'https://www.msci.com/documents/10199/1ee87397-6313-4f46-87ae-6761f666558e'],
+    ['CAC 40 dividendes réinvestis', 'https://www.zonebourse.com/cours/indice/CAC-40-DIVIDENDES-REINVES-3869660/cotations/'],
+    ['S&P 500 en euros, dividendes réinvestis', 'https://www.eupersonalfinance.eu/articles/average-annual-return-sp500'],
+    ['Fiscalité du PEA en 2026 (CSG à 10,6 %)', 'https://placement.meilleurtaux.com/bourse/actualites/2025-decembre/csg-10-6-impact-pea-avant-apres-5-ans.html'],
+];
+
+const INVEST_METHOD = [
+    ['Rendement moyen des indices', 'Taux annuel composé : (Π (1 + performance annuelle))^(1/n) − 1, en euros, dividendes réinvestis.'],
+    ['Imposition moyenne d\'un PEA', 'Taux sur les gains × part des gains dans la somme retirée ; rendement net = ((1 + gains × (1 − taux)))^(1/n) − 1.'],
+    ['Objectifs face aux stratégies', `Projection mois par mois : poche livrets au taux du Livret A, poche actions au rendement retenu moins les frais des ETF ; versements en début de mois ; gains des actions imposés au retrait comme dans un PEA. Perte « si 2008 » : ${CRASH * 100} % de la poche actions à l'échéance.`],
+];
 const frac = (pct) => pct / 100;
 
 /**
@@ -281,6 +296,57 @@ export function buildEpargneWorkbook(ctx, data) {
     });
   }
 
+  addInvestmentSheets(wb, ctx);
+
+  // ——— Taux ——————————————————————————————————————————————————————
+  const tx = wb.addSheet('Taux', { widths: [16, 12, 12, 22], freeze: 1 });
+  tx.row(['Date d\'effet', 'Livret A', 'LEP', 'Origine'], 'header');
+  for (const row of ctx.rates) {
+    tx.row([{ v: excelDate(row.from), s: 'date' },
+      row.livretA == null ? '' : { v: frac(row.livretA), s: 'percent' },
+      row.lep == null ? '' : { v: frac(row.lep), s: 'percent' },
+      row.from > ctx.today ? 'hypothèse' : row.source === 'saisi' ? 'saisi dans l\'app' : row.source === 'auto' ? 'officiel, récupéré automatiquement' : 'officiel']);
+  }
+  tx.row([]);
+  tx.row([{ v: `Plafonds : Livret A ${(PRODUCTS.livretA.cap / 100).toLocaleString('fr-FR')} €, LEP ${(PRODUCTS.lep.cap / 100).toLocaleString('fr-FR')} € (hors intérêts capitalisés).`, s: 'note' }]);
+  tx.row([{ v: `Inflation moyenne annuelle (IPC) : ${Object.entries(ctx.ref.annual).map(([y, v]) => `${y} ${v.toLocaleString('fr-FR')} %`).join(' · ')}.`, s: 'note' }]);
+
+  // ——— Sources et méthode ———————————————————————————————————————————
+  const src = wb.addSheet('Sources et méthode', { widths: [36, 100] });
+  src.row([{ v: 'Méthode', s: 'title' }]);
+  for (const [k, v] of [
+    ['Intérêts des livrets', 'Calcul par quinzaine (1er–15 et 16–fin de mois) : un versement rapporte à partir de la quinzaine suivante, un retrait cesse de rapporter dès sa quinzaine. Intérêts = solde en valeur × taux ÷ 24, versés au 31 décembre.'],
+    ['Rendement réel', '(1 + taux) ÷ (1 + inflation) − 1 (relation de Fisher).'],
+    ['Gain réel sur 12 mois', 'Solde × taux − solde × inflation, au solde actuel.'],
+    ['Brut équivalent', `Taux net ÷ (1 − ${TAX.pfu.toLocaleString('fr-FR')} %) : ce qu'un placement imposé au prélèvement forfaitaire devrait rapporter pour faire aussi bien.`],
+    ['Temps de doublement', 'ln 2 ÷ ln(1 + taux) ; règle de 72 : 72 ÷ taux en %.'],
+    ['Matelas de sécurité', 'Solde des livrets ÷ dépenses mensuelles moyennes des titulaires (3 derniers mois complets importés, hors épargne et virements).'],
+    ...INVEST_METHOD,
+    ['Solde de départ', 'Reconstitué à partir du solde saisi et des virements des relevés importés (calcul linéaire en le solde de départ).'],
+  ]) src.row([{ v: k, s: 'bold' }, { v, s: 'note' }]);
+  src.blank();
+  src.row([{ v: 'Sources', s: 'title' }]);
+  const fetched = ctx.official?.fetchedAt ? `récupérées automatiquement le ${longDate(ctx.official.fetchedAt.slice(0, 10))}` : 'valeurs livrées avec l\'app';
+  src.row([{ v: 'Données publiques', s: 'bold' }, { v: `${fetched} ; aucune donnée personnelle n'est envoyée pour les obtenir.`, s: 'note' }]);
+  for (const [k, v] of [
+    [`Inflation IPC, IPCH, sous-jacente, moyenne annuelle (INSEE, séries ${Object.values(INSEE_SERIES).join(', ')})`, SOURCES.insee.url],
+    ['€STR (BCE)', SOURCES.bce.url],
+    ['Taux du Livret A et du LEP', ctx.official?.livrets?.source === 'cdc' ? SOURCES.cdc.url : SOURCES.servicePublic.url],
+    ['Fonds euros 2025 (ACPR)', 'https://www.boursorama.com/epargne/assurance-vie/actualites/assurance-vie-en-2025-les-fonds-en-euros-ont-rapporte-2-65-en-moyenne-2520758cb9fc4554af651b0d697fa8a6'],
+    ['Prélèvement forfaitaire 2026', 'https://www.hagnere-patrimoine.fr/guides-patrimoine/comment-payer-moins-impots/prelevement-liberatoire-interets-2026'],
+    ...INVEST_SOURCES,
+  ]) src.row([{ v: k, s: 'bold' }, { v, s: 'link' }]);
+
+  return wb;
+}
+
+/**
+ * Feuilles de l'investissement, communes aux exports « Épargne » et « Investir » :
+ * indices, fiscalité du PEA, chaque PEA saisi, objectifs face aux stratégies.
+ * @param {object} ctx { ref, pea, names, today, inflation, goals, market, peaSim? }
+ */
+export function addInvestmentSheets(wb, ctx) {
+  const { inflation } = ctx;
   // ——— PEA : indices ——————————————————————————————————————————————
   const peaYears = yearsOf(INDEX_RETURNS[0]);
   const ix = wb.addSheet('PEA indices', { widths: [10, ...INDEX_RETURNS.map(() => 16), 16], freeze: 1 });
@@ -387,49 +453,50 @@ export function buildEpargneWorkbook(ctx, data) {
     });
   }
 
-  // ——— Taux ——————————————————————————————————————————————————————
-  const tx = wb.addSheet('Taux', { widths: [16, 12, 12, 22], freeze: 1 });
-  tx.row(['Date d\'effet', 'Livret A', 'LEP', 'Origine'], 'header');
-  for (const row of ctx.rates) {
-    tx.row([{ v: excelDate(row.from), s: 'date' },
-      row.livretA == null ? '' : { v: frac(row.livretA), s: 'percent' },
-      row.lep == null ? '' : { v: frac(row.lep), s: 'percent' },
-      row.from > ctx.today ? 'hypothèse' : row.source === 'saisi' ? 'saisi dans l\'app' : row.source === 'auto' ? 'officiel, récupéré automatiquement' : 'officiel']);
+  // ——— Objectifs face aux stratégies ———————————————————————————————
+  if (!ctx.goals?.length) return;
+  const m = ctx.market;
+  const ob = wb.addSheet('Objectifs', { widths: [34, 16, 18, 16, 18, 16, 14] });
+  ob.row([{ v: 'Vos objectifs face aux stratégies', s: 'title' }]);
+  ob.row([{ v: `Export du ${longDate(ctx.today)}. Hypothèse : ${EQUITY_CHOICES.find((c) => c.id === m.equity)?.text ?? ''}, frais des ETF déduits ; livrets au taux du Livret A ; gains des actions imposés au retrait comme dans un PEA.`, s: 'note' }]);
+  ob.merge('A2:G2');
+  ob.blank();
+  const rEq = ob.row(['Rendement des actions (net de frais)', { v: m.equityRate, s: 'percent' }]);
+  const rSafe = ob.row(['Rendement des livrets', { v: m.safeRate, s: 'percent' }]);
+  ob.row(['Chute des actions retenue (2008)', { v: CRASH, s: 'percent' }]);
+  const rInfl = ob.row(['Inflation (IPC) sur un an', { v: frac(inflation.rate), s: 'percent' }]);
+  const month = ctx.today.slice(0, 7);
+  for (const goal of ctx.goals) {
+    const result = confront(goal, m, month);
+    ob.blank();
+    ob.row(['Objectif', 'Montant visé', 'Échéance', 'Déjà mis de côté', 'Versement mensuel', 'Mois restants', 'En euros d\'aujourd\'hui'], 'header');
+    const g = ob.rows.length + 1;
+    ob.row([{ v: goal.name, s: 'bold' }, { v: eur(goal.target), s: 'euroBold' }, monthLong(goal.deadline), { v: eur(goal.saved), s: 'euro' },
+      { v: eur(goal.monthly), s: 'euro' }, { v: result.months, s: 'number' },
+      { f: `B${g}/(1+$B$${rInfl})^(F${g}/12)`, v: eur(goal.target / (1 + inflation.rate / 100) ** result.years), s: 'euro' }]);
+    ob.row(['Stratégie', 'Part d\'actions', 'Net à l\'échéance', 'Écart', 'Versement nécessaire', 'Perte si 2008', 'Conseillée'], 'header');
+    for (const row of result.rows) {
+      const n = ob.rows.length + 1;
+      ob.row([row.strategy.name, { v: row.strategy.equity, s: 'percent' }, { v: eur(row.net), s: row.suggested ? 'euroBold' : 'euro' },
+        { f: `C${n}-$B$${g}`, v: eur(row.gap), s: 'euro' },
+        row.needed == null ? '' : { v: eur(row.needed), s: 'euro' },
+        { v: eur(row.crash), s: 'euro' }, row.suggested ? 'oui' : '']);
+    }
   }
-  tx.row([]);
-  tx.row([{ v: `Plafonds : Livret A ${(PRODUCTS.livretA.cap / 100).toLocaleString('fr-FR')} €, LEP ${(PRODUCTS.lep.cap / 100).toLocaleString('fr-FR')} € (hors intérêts capitalisés).`, s: 'note' }]);
-  tx.row([{ v: `Inflation moyenne annuelle (IPC) : ${Object.entries(ctx.ref.annual).map(([y, v]) => `${y} ${v.toLocaleString('fr-FR')} %`).join(' · ')}.`, s: 'note' }]);
+  ob.blank();
+  ob.row([{ v: `Stratégies : ${STRATEGIES.map((x) => `${x.name} (${x.equity * 100} % d'actions)`).join(', ')}. Conseillée selon le temps restant : livrets sous 3 ans, prudente de 3 à 5 ans, équilibrée de 5 à 8 ans, dynamique au-delà. Rendements B${rEq} et B${rSafe} supposés constants : un ordre de grandeur, pas une promesse.`, s: 'note' }]);
+  ob.merge(`A${ob.rows.length}:G${ob.rows.length}`);
+}
 
-  // ——— Sources et méthode ———————————————————————————————————————————
+/** Classeur de l'onglet « Investir » : feuilles d'investissement, puis méthode et sources. */
+export function buildInvestWorkbook(ctx) {
+  const wb = new Workbook({ title: 'Mon Budget — Investissement', author: 'Mon Budget' });
+  addInvestmentSheets(wb, ctx);
   const src = wb.addSheet('Sources et méthode', { widths: [36, 100] });
   src.row([{ v: 'Méthode', s: 'title' }]);
-  for (const [k, v] of [
-    ['Intérêts des livrets', 'Calcul par quinzaine (1er–15 et 16–fin de mois) : un versement rapporte à partir de la quinzaine suivante, un retrait cesse de rapporter dès sa quinzaine. Intérêts = solde en valeur × taux ÷ 24, versés au 31 décembre.'],
-    ['Rendement réel', '(1 + taux) ÷ (1 + inflation) − 1 (relation de Fisher).'],
-    ['Gain réel sur 12 mois', 'Solde × taux − solde × inflation, au solde actuel.'],
-    ['Brut équivalent', `Taux net ÷ (1 − ${TAX.pfu.toLocaleString('fr-FR')} %) : ce qu'un placement imposé au prélèvement forfaitaire devrait rapporter pour faire aussi bien.`],
-    ['Temps de doublement', 'ln 2 ÷ ln(1 + taux) ; règle de 72 : 72 ÷ taux en %.'],
-    ['Matelas de sécurité', 'Solde des livrets ÷ dépenses mensuelles moyennes des titulaires (3 derniers mois complets importés, hors épargne et virements).'],
-    ['Rendement moyen des indices', 'Taux annuel composé : (Π (1 + performance annuelle))^(1/n) − 1, en euros, dividendes réinvestis.'],
-    ['Imposition moyenne d\'un PEA', 'Taux sur les gains × part des gains dans la somme retirée ; rendement net = ((1 + gains × (1 − taux)))^(1/n) − 1.'],
-    ['Solde de départ', 'Reconstitué à partir du solde saisi et des virements des relevés importés (calcul linéaire en le solde de départ).'],
-  ]) src.row([{ v: k, s: 'bold' }, { v, s: 'note' }]);
+  for (const [k, v] of INVEST_METHOD) src.row([{ v: k, s: 'bold' }, { v, s: 'note' }]);
   src.blank();
   src.row([{ v: 'Sources', s: 'title' }]);
-  const fetched = ctx.official?.fetchedAt ? `récupérées automatiquement le ${longDate(ctx.official.fetchedAt.slice(0, 10))}` : 'valeurs livrées avec l\'app';
-  src.row([{ v: 'Données publiques', s: 'bold' }, { v: `${fetched} ; aucune donnée personnelle n'est envoyée pour les obtenir.`, s: 'note' }]);
-  for (const [k, v] of [
-    [`Inflation IPC, IPCH, sous-jacente, moyenne annuelle (INSEE, séries ${Object.values(INSEE_SERIES).join(', ')})`, SOURCES.insee.url],
-    ['€STR (BCE)', SOURCES.bce.url],
-    ['Taux du Livret A et du LEP', ctx.official?.livrets?.source === 'cdc' ? SOURCES.cdc.url : SOURCES.servicePublic.url],
-    ['Fonds euros 2025 (ACPR)', 'https://www.boursorama.com/epargne/assurance-vie/actualites/assurance-vie-en-2025-les-fonds-en-euros-ont-rapporte-2-65-en-moyenne-2520758cb9fc4554af651b0d697fa8a6'],
-    ['Prélèvement forfaitaire 2026', 'https://www.hagnere-patrimoine.fr/guides-patrimoine/comment-payer-moins-impots/prelevement-liberatoire-interets-2026'],
-    ['MSCI World (EUR), performances nettes', 'https://www.msci.com/documents/10199/890dd84d-3750-4656-87f2-1229ed5a5d6e'],
-    ['MSCI ACWI (EUR), performances nettes', 'https://www.msci.com/documents/10199/1ee87397-6313-4f46-87ae-6761f666558e'],
-    ['CAC 40 dividendes réinvestis', 'https://www.zonebourse.com/cours/indice/CAC-40-DIVIDENDES-REINVES-3869660/cotations/'],
-    ['S&P 500 en euros, dividendes réinvestis', 'https://www.eupersonalfinance.eu/articles/average-annual-return-sp500'],
-    ['Fiscalité du PEA en 2026 (CSG à 10,6 %)', 'https://placement.meilleurtaux.com/bourse/actualites/2025-decembre/csg-10-6-impact-pea-avant-apres-5-ans.html'],
-  ]) src.row([{ v: k, s: 'bold' }, { v, s: 'link' }]);
-
+  for (const [k, v] of INVEST_SOURCES) src.row([{ v: k, s: 'bold' }, { v, s: 'link' }]);
   return wb;
 }

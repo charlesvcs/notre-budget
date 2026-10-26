@@ -72,5 +72,4 @@
 @media (max-width: 560px) {
   .backup { padding-top: 20px; }
   .backup-pass__fields { grid-template-columns: minmax(0, 1fr); }
-  .app-bar__nav a { padding-inline: 11px; }
 }

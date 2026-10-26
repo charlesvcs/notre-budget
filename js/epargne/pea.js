@@ -1,0 +1,124 @@
+/**
+ * PEA : rendement des grands indices d'actions et fiscalité — données et fonctions pures.
+ *
+ *  - Performances annuelles en euros, dividendes réinvestis (indices « net return » ou
+ *    « dividendes réinvestis »), hors frais d'ETF. Un PEA les suit via des ETF éligibles
+ *    (réplication synthétique pour les indices mondiaux et américains).
+ *  - Rendement moyen = taux annuel composé (moyenne géométrique) : ((Π (1 + r)) ^ (1/n)) − 1.
+ *    La moyenne arithmétique des années, plus flatteuse, n'est pas ce qu'a gagné l'investisseur.
+ *  - Fiscalité 2026 (LFSS 2026) : seuls les gains sont imposés, au retrait.
+ *    Avant 5 ans : prélèvement forfaitaire de 31,4 % (12,8 % d'impôt + 18,6 % de prélèvements
+ *    sociaux) et clôture du plan. Après 5 ans : 18,6 % de prélèvements sociaux seulement.
+ *
+ * À rafraîchir chaque janvier : ajouter l'année écoulée à INDEX_RETURNS (fiches MSCI en EUR,
+ * Euronext pour le CAC 40 GR) et l'inflation moyenne correspondante dans livret-rates.js.
+ */
+import { TAX } from './livret-rates.js';
+
+export const PEA = {
+  cap: 15_000_000, // plafond des versements, en centimes
+  years: 5, // durée de détention ouvrant l'exonération d'impôt sur le revenu
+  taxBefore: TAX.pfu, // retrait avant 5 ans : impôt + prélèvements sociaux, sur les gains
+  taxAfter: TAX.social, // retrait après 5 ans : prélèvements sociaux seuls, sur les gains
+};
+
+/** Performances annuelles en %, en euros, dividendes réinvestis. */
+export const INDEX_RETURNS = [
+  {
+    id: 'world',
+    name: 'MSCI World',
+    note: 'Environ 1 300 grandes entreprises de 23 pays développés : l\'indice « monde » de la plupart des ETF du PEA.',
+    global: true,
+    source: 'MSCI World Index (EUR), net returns',
+    returns: { 2016: 10.73, 2017: 7.51, 2018: -4.11, 2019: 30.02, 2020: 6.33, 2021: 31.07, 2022: -12.78, 2023: 19.6, 2024: 26.6, 2025: 6.77 },
+  },
+  {
+    id: 'acwi',
+    name: 'MSCI ACWI',
+    note: 'Le monde entier, pays émergents compris (47 pays).',
+    global: true,
+    source: 'MSCI ACWI Index (EUR), net returns',
+    returns: { 2016: 11.09, 2017: 8.89, 2018: -4.85, 2019: 28.93, 2020: 6.65, 2021: 27.54, 2022: -13.01, 2023: 18.06, 2024: 25.33, 2025: 7.86 },
+  },
+  {
+    id: 'sp500',
+    name: 'S&P 500',
+    note: 'Les 500 plus grandes entreprises américaines, converties en euros.',
+    source: 'S&P 500 Net Total Return, en euros',
+    returns: { 2016: 15.63, 2017: 7.08, 2018: 0.15, 2019: 34.02, 2020: 8.39, 2021: 39.45, 2022: -13.04, 2023: 21.9, 2024: 32.97, 2025: 4.23 },
+  },
+  {
+    id: 'cac40',
+    name: 'CAC 40 dividendes réinvestis',
+    note: 'Les 40 plus grandes capitalisations de la Bourse de Paris (indice GR).',
+    source: 'CAC 40 Gross Total Return (Euronext)',
+    returns: { 2016: 8.88, 2017: 12.73, 2018: -8.0, 2019: 30.45, 2020: -4.96, 2021: 31.88, 2022: -6.68, 2023: 20.14, 2024: 0.92, 2025: 14.28 },
+  },
+];
+
+/** Années disponibles pour un indice, dans l'ordre. */
+export const yearsOf = (index) => Object.keys(index.returns).map(Number).sort((a, b) => a - b);
+
+/** Taux annuel composé (fraction) d'une suite de performances annuelles en %. */
+export function annualized(returns) {
+  if (!returns.length) return null;
+  const growth = returns.reduce((g, r) => g * (1 + r / 100), 1);
+  return growth ** (1 / returns.length) - 1;
+}
+
+/**
+ * Statistiques d'un indice sur ses `count` dernières années connues.
+ * real : rendement composé après inflation française (moyenne annuelle de l'IPC).
+ */
+export function indexStats(index, count, inflation = {}) {
+  const list = yearsOf(index).slice(-count);
+  const returns = list.map((y) => index.returns[y]);
+  const withInflation = list.filter((y) => inflation[y] != null);
+  const realGrowth = withInflation.reduce((g, y) => g * (1 + index.returns[y] / 100) / (1 + inflation[y] / 100), 1);
+  const worst = list.reduce((w, y) => (index.returns[y] < index.returns[w] ? y : w), list[0]);
+  const best = list.reduce((b, y) => (index.returns[y] > index.returns[b] ? y : b), list[0]);
+  return {
+    from: list[0],
+    to: list.at(-1),
+    years: list.length,
+    cagr: annualized(returns),
+    mean: returns.reduce((s, r) => s + r, 0) / returns.length / 100,
+    real: withInflation.length === list.length ? realGrowth ** (1 / list.length) - 1 : null,
+    worst: { year: worst, rate: index.returns[worst] / 100 },
+    best: { year: best, rate: index.returns[best] / 100 },
+    negative: returns.filter((r) => r < 0).length,
+  };
+}
+
+/**
+ * Ce que coûte l'imposition des gains au retrait, pour un placement à `rate` (fraction)
+ * pendant `years` ans, imposé à `taxPct` % sur les gains seulement.
+ *  - gainShare : part des gains dans la somme retirée ;
+ *  - onWithdrawal : imposition moyenne de la somme retirée (taux × part des gains) ;
+ *  - netRate : rendement annuel une fois l'imposition payée ;
+ *  - drag : rendement perdu chaque année à cause de l'imposition (en points, fraction).
+ */
+export function taxOnExit(rate, years, taxPct) {
+  const growth = (1 + rate) ** years;
+  const gain = growth - 1;
+  const net = 1 + gain * (1 - taxPct / 100);
+  const gainShare = gain > 0 ? gain / growth : 0;
+  const netRate = net ** (1 / years) - 1;
+  return { gainShare, onWithdrawal: gainShare * (taxPct / 100), netRate, drag: rate - netRate };
+}
+
+/** Taux d'imposition des gains d'un PEA selon son âge au moment du retrait. */
+export const peaTax = (years) => (years < PEA.years ? PEA.taxBefore : PEA.taxAfter);
+
+/** Valeur finale nette d'imposition d'une somme (centimes) placée `years` ans à `rate`. */
+export function netValue(cents, rate, years, taxPct) {
+  const gross = cents * (1 + rate) ** years;
+  return Math.round(gross - Math.max(0, gross - cents) * (taxPct / 100));
+}
+
+/** Les indices « monde » de référence : moyenne de leurs rendements composés sur la période. */
+export function globalAverage(count, inflation = {}, list = INDEX_RETURNS) {
+  const stats = list.filter((i) => i.global).map((i) => indexStats(i, count, inflation));
+  const avg = (key) => stats.reduce((s, x) => s + x[key], 0) / stats.length;
+  return { cagr: avg('cagr'), real: stats.every((s) => s.real != null) ? avg('real') : null, from: stats[0].from, to: stats[0].to, years: stats[0].years };
+}

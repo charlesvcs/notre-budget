@@ -705,6 +705,40 @@
   white-space: nowrap;
 }
 
+/* Chiffres clés : libellé, valeur en grand, note */
+.sv-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13em, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.sv-kpi {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.sv-kpi dt { color: var(--text-muted); font-size: 0.84rem; font-weight: 600; }
+.sv-kpi dd { margin: 0; font-family: var(--font-display); font-size: 1.3rem; font-weight: 900; }
+.sv-kpi small { color: var(--text-muted); font-size: 0.8rem; }
+.sv-kpi small .sv-real { font-size: 0.8rem; }
+.sv-kpi small .sv-verdict-tag { font-size: 0.82rem; }
+
+/* Matelas de sécurité : les repères côte à côte, empilés sur petit écran */
+.sv-stats--row { grid-template-columns: repeat(auto-fit, minmax(11em, 1fr)); column-gap: 20px; }
+.sv-stats--row > div { grid-template-columns: minmax(0, 1fr); grid-template-areas: "label" "value" "note"; }
+.sv-stats--row dd { font-size: 1.05rem; }
+.sv-safety__value .sv-verdict-tag { margin-left: 4px; }
+
+.sv-widget__sub { margin: 6px 0 -6px; font-size: 1rem; }
+/* Tableaux du PEA : sur petit écran, ils défilent plutôt que d'écraser la colonne des noms */
+.sv-table--pea { min-width: 34em; }
+.sv-table--pea tbody th { min-width: 9em; }
+
 /* Données publiques mises à jour automatiquement */
 .sv-live {
   display: grid;

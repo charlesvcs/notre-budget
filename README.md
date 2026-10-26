@@ -39,7 +39,8 @@ Finance/
 │   ├── epargne/
 │   │   ├── livret-rates.js    Plafonds, taux officiels du Livret A et du LEP, inflation INSEE
 │   │   ├── livret-model.js    Calculs : quinzaines, intérêts au 31/12, rendement réel, projection
-│   │   ├── indicators.js      Indicateurs : rendement réel, brut équivalent, doublement, historique, précaution
+│   │   ├── indicators.js      Indicateurs : rendement réel, brut équivalent, doublement, historique, matelas de sécurité
+│   │   ├── pea.js             PEA : performances des indices (MSCI World, ACWI, S&P 500, CAC 40 GR), fiscalité
 │   │   ├── widgets.js         Widgets du tableau de bord (bulletin, comparateur, projection…)
 │   │   ├── format.js          Mise en forme partagée (euros, %, badges)
 │   │   └── epargne-view.js    Écran « Épargne » (livrets, virements à rattacher, widgets, taux)
@@ -186,7 +187,21 @@ npx vercel --prod     # mise en ligne
     (`/api/taux-livrets`) ; sans serveur local, la Caisse des Dépôts (en retard).
   Les valeurs de `livret-rates.js` restent le filet de sécurité hors ligne.
   Si l'INSEE change de base (comme en janvier 2026), mettre à jour `INSEE_SERIES`.
+- **Matelas de sécurité** : solde des livrets ÷ dépenses mensuelles moyennes
+  mesurées dans les relevés (titulaires des livrets, 3 derniers mois complets,
+  hors épargne et virements). Affiché sous le tableau des livrets et dans le
+  widget « Matelas de sécurité » : objectifs 3 et 6 mois en euros, ce qui
+  manque ou dépasse, et le temps pour atteindre 3 mois au rythme des
+  versements réguliers.
+- **PEA** (widget) : rendement moyen des indices sur 5 ou 10 ans (taux annuel
+  composé, en euros, dividendes réinvestis, hors frais), après inflation et
+  net de prélèvements sociaux ; imposition moyenne selon la durée de détention
+  (avant 5 ans : 31,4 % des gains et clôture ; après : 18,6 % de prélèvements
+  sociaux), comparée au compte-titres. Un tableau de bord déjà personnalisé
+  reçoit les nouveaux widgets à la fin (réglage `epargneWidgetsKnown`).
 - Valeurs de référence des widgets, à rafraîchir de temps en temps dans
   `livret-rates.js` : `INFLATION_INDICES` (IPCH, sous-jacente), `ANNUAL_INFLATION`
   (moyenne de chaque année, en janvier), `BENCHMARKS` (fonds euros chaque début
   d'année, €STR), `TAX` (loi de financement de la Sécurité sociale).
+  Chaque janvier, ajouter l'année écoulée à `INDEX_RETURNS` dans `pea.js`
+  (fiches MSCI en EUR « net returns », Euronext pour le CAC 40 GR).

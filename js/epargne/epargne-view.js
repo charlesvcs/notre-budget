@@ -12,13 +12,16 @@ import { normalizeLabel } from '../import/categorizer.js';
 import { buildLivretModel, livretKeywords, matchFlows, summarize } from './livret-model.js';
 import { LIVRET_COLORS, OFFICIAL_INFLATION, PRODUCTS, mergeRates, referenceData } from './livret-rates.js';
 import { SOURCES, isStale, refreshOfficialData } from './live-data.js';
-import { monthlyExpenses } from './indicators.js';
+import { monthlyExpenses, realRate, safetyNet } from './indicators.js';
 import { buildEpargneWorkbook } from './export.js';
 import { download } from '../backup/backup-core.js';
 import { OFF_BUDGET_KINDS } from '../db/schema.js';
-import { DEFAULT_WIDGETS, WIDGETS, widgetById } from './widgets.js';
 import {
-  asDate, h, longDate, money, moneyExact, monthLong, pct, pctOf, realBadge, setWidths, signedMoney, gainBadge,
+  DEFAULT_WIDGETS, LEGACY_WIDGETS, WIDGETS, monthsOf, safetyVerdict, verdictTag, widgetById,
+} from './widgets.js';
+import { globalAverage } from './pea.js';
+import {
+  asDate, h, longDate, money, moneyExact, monthLong, pct, pct1, pctOf, realBadge, setWidths, signedMoney, gainBadge,
 } from './format.js';
 
 const decimal = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
@@ -51,6 +54,7 @@ export function mountEpargneView(root = document) {
     ledger: $('sv-ledger'),
     verdict: $('sv-verdict'),
     verdictNote: $('sv-verdict-note'),
+    heroKpis: $('sv-hero-kpis'),
     livrets: $('sv-livrets'),
     livretTemplate: $('sv-livret-template'),
     unmatchedCard: $('sv-unmatched-card'),
@@ -94,9 +98,11 @@ export function mountEpargneView(root = document) {
     models: [],
     summary: null,
     horizon: 5,
+    peaYears: 10,
     widgets: DEFAULT_WIDGETS,
     widgetDraft: null, // ordre des widgets pendant « Personnaliser » (rien n'est enregistré avant « Valider »)
     expenses: null,
+    safety: null,
     setup: null, // 'premier' | 'ajout' | null
     editing: null, // id du livret en cours de modification
     allRates: false,
@@ -118,9 +124,9 @@ export function mountEpargneView(root = document) {
   async function load() {
     state.today = todayIso();
     const recentMonths = [1, 2, 3, 4].map((n) => addMonths(state.today.slice(0, 7), -n));
-    const [livrets, categories, names, activeProfiles, userRates, inflation, assign, earliest, widgets, recent, official, auto] = await Promise.all([
+    const [livrets, categories, names, activeProfiles, userRates, inflation, assign, earliest, widgets, known, recent, official, auto] = await Promise.all([
       getLivrets(), getCategories({ includeArchived: true }), getProfileNames(), getActiveProfiles(), getSetting('livretRates'),
-      getSetting('inflation'), getSetting('livretAssign'), getEarliestMonth(), getSetting('epargneWidgets'),
+      getSetting('inflation'), getSetting('livretAssign'), getEarliestMonth(), getSetting('epargneWidgets'), getSetting('epargneWidgetsKnown'),
       Promise.all(recentMonths.map(getTransactionsByMonth)).then((lists) => lists.flat()),
       getSetting('donneesOfficielles'), getSetting('donneesAuto'),
     ]);
@@ -141,7 +147,9 @@ export function mountEpargneView(root = document) {
     state.assign = assign ?? {};
     state.earliest = earliest;
     state.savingsCategories = new Set(categories.filter((c) => c.kind === 'epargne').map((c) => c.id));
-    state.widgets = (widgets ?? DEFAULT_WIDGETS).filter((id) => widgetById.has(id));
+    // Un tableau de bord enregistré reçoit les widgets apparus depuis (le PEA…), à la fin
+    const added = widgets ? WIDGETS.map((w) => w.id).filter((id) => !(known ?? LEGACY_WIDGETS).includes(id)) : [];
+    state.widgets = [...(widgets ?? DEFAULT_WIDGETS), ...added].filter((id) => widgetById.has(id));
     // Dépenses des titulaires des livrets, pour l'épargne de précaution
     const holders = new Set(state.livrets.map((l) => l.profile));
     state.expenses = monthlyExpenses(recent, categories, holders, state.today.slice(0, 7));
@@ -176,8 +184,12 @@ export function mountEpargneView(root = document) {
       horizon: state.horizon,
     }));
     state.summary = summarize(state.models, state.inflation.rate);
+    state.safety = safetyNet(state.summary.balance, state.expenses, plannedMonthly());
     render();
   }
+
+  /** Versements réguliers prévus sur l'ensemble des livrets (centimes par mois). */
+  const plannedMonthly = () => state.models.reduce((sum, m) => sum + m.plan.monthly, 0);
 
   function render() {
     const has = state.livrets.length > 0;
@@ -254,6 +266,29 @@ export function mountEpargneView(root = document) {
       notes.push(`Le LEP rapporte plus que le Livret A : tant qu'il n'est pas plein (encore ${money(lep.capRoom)}), c'est là qu'un versement rapporte le plus.`);
     }
     el.verdictNote.textContent = notes.join(' ');
+    renderHeroKpis();
+  }
+
+  /** Repères sous le tableau : matelas de sécurité, dépenses mesurées, rendement des indices (PEA). */
+  function renderHeroKpis() {
+    const { safety, expenses, summary } = state;
+    const tile = (label, value, note) => h('div', 'sv-kpi', h('dt', null, label), h('dd', null, value), h('small', null, note));
+    const tiles = [];
+    if (safety) {
+      const { verdict, label } = safetyVerdict(safety, realRate(summary.rate, state.inflation.rate));
+      tiles.push(
+        tile('Matelas de sécurité', h('span', 'sv-num', `${monthsOf(safety.months)} de dépenses`), verdictTag(verdict, label)),
+        tile('Dépenses moyennes mesurées', h('span', 'sv-num', `${money(expenses.average)} / mois`),
+          `${expenses.months.length} dernier${expenses.months.length > 1 ? 's' : ''} mois complet${expenses.months.length > 1 ? 's' : ''}, hors épargne`),
+      );
+    } else {
+      tiles.push(tile('Matelas de sécurité', h('span', 'sv-num', '—'), 'Importez un relevé complet pour mesurer vos dépenses'));
+    }
+    const global = globalAverage(10, state.ref.annual);
+    tiles.push(tile('Indices mondiaux (PEA)', h('span', 'sv-num', `${pct1(global.cagr)} / an`),
+      `moyenne ${global.from}–${global.to}, dividendes réinvestis, avant prélèvements sociaux`));
+    el.heroKpis.replaceChildren(...tiles);
+    el.heroKpis.hidden = false;
   }
 
   // ——— Cartes des livrets ————————————————————————————————————————
@@ -527,6 +562,13 @@ export function mountEpargneView(root = document) {
       compute();
     },
     expenses: state.expenses,
+    safety: state.safety,
+    planned: plannedMonthly(),
+    peaYears: state.peaYears,
+    setPeaYears(n) {
+      state.peaYears = n;
+      renderBoard();
+    },
     holders: isSolo() ? '' : [...new Set(state.livrets.map((l) => nameOf(l.profile)))].join(' et '),
     animate: state.animate,
     today: state.today,
@@ -664,6 +706,7 @@ export function mountEpargneView(root = document) {
   });
   el.boardSave.addEventListener('click', async () => {
     await setSetting('epargneWidgets', state.widgetDraft);
+    await setSetting('epargneWidgetsKnown', WIDGETS.map((w) => w.id));
     state.widgets = state.widgetDraft;
     state.widgetDraft = null;
     state.animate = true;

@@ -4,18 +4,24 @@
  *
  * Un widget : { id, title, description, wide, hint(ctx), control?(ctx), render(body, ctx) }.
  * ctx : { models, livrets, summary, inflation, rates, titleOf, horizon, setHorizon,
- *         expenses, holders, animate, today }
+ *         expenses, safety, planned, holders, peaYears, setPeaYears, animate, today }
  */
 import {
   benchmarks, doublingYears, grossEquivalent, halvingYears, history, realRate,
 } from './indicators.js';
 import {
-  h, gainBadge, icon, longDate, money, monthLong, pct, pctOf, realBadge, setWidths, signedMoney, signedPct, signedPoints,
-  years,
+  h, gainBadge, icon, longDate, money, monthLong, monthShort, pct, pct1, pctOf, realBadge, setWidths,
+  signedMoney, signedPct, signedPoints, years,
 } from './format.js';
 import { LIVRET_COLORS, PRODUCTS, SAFETY_MONTHS, TAX } from './livret-rates.js';
+import {
+  INDEX_RETURNS, PEA, globalAverage, indexStats, netValue, peaTax, taxOnExit,
+} from './pea.js';
 
-export const DEFAULT_WIDGETS = ['bulletin', 'gain-reel', 'comparateur', 'projection'];
+export const DEFAULT_WIDGETS = ['bulletin', 'matelas', 'gain-reel', 'comparateur', 'pea', 'projection'];
+
+/** Widgets proposés avant l'ajout du PEA : un tableau de bord enregistré avant reçoit les nouveaux. */
+export const LEGACY_WIDGETS = ['bulletin', 'gain-reel', 'comparateur', 'projection', 'indices', 'doublement', 'historique', 'matelas'];
 
 const VERDICTS = {
   ok: { label: 'Favorable', icon: 'ok' },
@@ -23,13 +29,24 @@ const VERDICTS = {
   defavorable: { label: 'Défavorable', icon: 'defavorable' },
 };
 
-function verdictTag(key) {
+export function verdictTag(key, label = VERDICTS[key].label) {
   const tag = h('span', 'sv-verdict-tag');
   tag.dataset.verdict = key;
   tag.innerHTML = icon(VERDICTS[key].icon, 14);
-  tag.append(VERDICTS[key].label);
+  tag.append(label);
   return tag;
 }
+
+/** Matelas de sécurité : verdict et libellé court selon la fourchette conseillée. */
+export function safetyVerdict(safety, real) {
+  const { min, max } = SAFETY_MONTHS;
+  if (safety.status === 'court') return { verdict: 'attention', label: `Sous ${min} mois` };
+  if (safety.status === 'large' && safety.months > max * 1.5 && real < 0) return { verdict: 'attention', label: `Au-delà de ${max} mois` };
+  return { verdict: 'ok', label: safety.status === 'large' ? `Plus de ${max} mois` : `Entre ${min} et ${max} mois` };
+}
+
+/** « 7,4 mois » */
+export const monthsOf = (n) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} mois`;
 
 /** Une ligne « nom | rail | valeur » sur une échelle commune, avec un repère optionnel. */
 function rateRow({ name, note, value, ratio, mark, tone = 'saved', color, extra }) {
@@ -104,18 +121,19 @@ export function bulletinItems(ctx) {
     });
   }
 
-  if (ctx.expenses) {
-    const months = summary.balance / ctx.expenses.average;
+  if (ctx.safety) {
+    const { months, status } = ctx.safety;
     const { min, max } = SAFETY_MONTHS;
+    const { verdict } = safetyVerdict(ctx.safety, real);
     items.push({
-      name: 'Épargne de précaution',
-      value: h('span', 'sv-num', `${months.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} mois`),
-      verdict: months < min ? 'attention' : months > max * 1.5 && real < 0 ? 'attention' : 'ok',
-      text: months < min
-        ? `Vos livrets couvrent moins de ${min} mois de dépenses : la fourchette souvent conseillée est de ${min} à ${max} mois.`
-        : months > max * 1.5 && real < 0
-          ? `Bien au-delà des ${min} à ${max} mois conseillés, alors que les livrets perdent face à l'inflation : une part pourrait viser le long terme.`
-          : `Vos livrets couvrent ${min} mois de dépenses ou plus : votre réserve pour les imprévus est en place.`,
+      name: 'Matelas de sécurité',
+      value: h('span', 'sv-num', monthsOf(months)),
+      verdict,
+      text: status === 'court'
+        ? `Vos livrets couvrent moins de ${min} mois de vos dépenses moyennes (${money(ctx.expenses.average)}) : la fourchette souvent conseillée est de ${min} à ${max} mois. Il manque ${money(ctx.safety.gap)}.`
+        : verdict === 'attention'
+          ? `Bien au-delà des ${min} à ${max} mois conseillés, alors que les livrets perdent face à l'inflation : ${money(ctx.safety.surplus)} pourraient viser le long terme.`
+          : `Vos livrets couvrent ${min} mois de vos dépenses moyennes (${money(ctx.expenses.average)}) ou plus : votre réserve pour les imprévus est en place.`,
     });
   }
 
@@ -336,41 +354,160 @@ const historique = {
   },
 };
 
-// ——— Épargne de précaution ————————————————————————————————————————————
+// ——— Matelas de sécurité ————————————————————————————————————————————
 
 const matelas = {
   id: 'matelas',
-  title: 'Épargne de précaution',
-  description: 'Combien de mois de dépenses courantes vos livrets peuvent couvrir.',
-  hint: () => `Les conseils les plus courants visent ${SAFETY_MONTHS.min} à ${SAFETY_MONTHS.max} mois de dépenses, sur des livrets disponibles à tout moment.`,
+  title: 'Matelas de sécurité',
+  description: 'Combien de mois de vos dépenses moyennes, mesurées dans les relevés, vos livrets peuvent couvrir.',
+  wide: true,
+  hint: () => `Les conseils les plus courants visent ${SAFETY_MONTHS.min} à ${SAFETY_MONTHS.max} mois de dépenses sur des livrets disponibles à tout moment ; plutôt le haut de la fourchette avec un revenu irrégulier ou un seul salaire.`,
   render(body, ctx) {
-    if (!ctx.expenses) {
-      body.append(h('p', 'card__empty', 'Importez au moins un relevé complet pour connaître vos dépenses mensuelles.'));
+    if (!ctx.safety) {
+      body.append(h('p', 'card__empty', 'Importez au moins un relevé complet pour mesurer vos dépenses mensuelles.'));
       return;
     }
-    const months = ctx.summary.balance / ctx.expenses.average;
+    const { expenses, safety } = ctx;
     const { min, max } = SAFETY_MONTHS;
-    const scale = Math.max(max * 1.5, months * 1.1);
+    const { verdict, label } = safetyVerdict(safety, realRate(ctx.summary.rate, ctx.inflation.rate));
+    const scale = Math.max(max * 1.5, safety.months * 1.1);
     const rail = h('div', 'sv-safety');
     rail.style.setProperty('--from', pct(min / scale));
     rail.style.setProperty('--to', pct(max / scale));
     const fill = h('span', 'sv-safety__fill');
     // Zone conseillée en fond, et deux entailles qui restent visibles sur le remplissage
     rail.append(h('span', 'sv-safety__zone'), fill, h('span', 'sv-safety__cuts'));
+    rail.setAttribute('role', 'img');
+    rail.setAttribute('aria-label', `${monthsOf(safety.months)} couverts ; zone conseillée de ${min} à ${max} mois`);
     const ticks = h('div', 'sv-safety__ticks');
+    ticks.setAttribute('aria-hidden', 'true');
     for (const n of [min, max]) {
       const t = h('span', null, `${n} mois`);
       t.style.setProperty('--at', pct(n / scale));
       ticks.append(t);
     }
-    const value = h('p', 'sv-safety__value', h('strong', null, `${months.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} mois`),
-      ` de dépenses couverts par vos livrets (${money(ctx.summary.balance)})`);
-    const surplus = ctx.summary.balance - max * ctx.expenses.average;
+    const value = h('p', 'sv-safety__value', h('strong', null, monthsOf(safety.months)),
+      ` de dépenses couverts par vos livrets (${money(ctx.summary.balance)}) `, verdictTag(verdict, label));
+
+    // Les dépenses mesurées, mois par mois
     const holderNote = ctx.holders ? ` de ${ctx.holders}` : '';
-    body.append(value, rail, ticks,
-      h('p', 'card__hint', `Dépenses moyennes${holderNote} : ${money(ctx.expenses.average)} par mois (${ctx.expenses.months.map(monthLong).join(', ')}), hors épargne et virements.`
-        + (surplus > 0 ? ` Au-delà de ${max} mois, ${money(surplus)} n'ont pas besoin d'être disponibles tout de suite : c'est la part qui peut viser le long terme.` : '')));
-    setWidths([[fill, months / scale]], ctx.animate);
+    const detail = expenses.months.map((m) => `${monthShort(m)} ${money(expenses.byMonth.get(m))}`).join(' · ');
+    const stat = (term, val, note) => h('div', null, h('dt', null, term), h('dd', null, val), note ? h('small', null, note) : null);
+    const target = (n, amount) => {
+      const left = amount - ctx.summary.balance;
+      return stat(`Objectif ${n} mois`, money(amount), left > 0 ? `il manque ${money(left)}` : `atteint, ${money(-left)} au-delà`);
+    };
+    let pace;
+    if (safety.gap > 0) {
+      pace = safety.reachIn
+        ? stat('À votre rythme', `${safety.reachIn} mois`, `pour atteindre ${min} mois, avec ${money(ctx.planned)} versés chaque mois`)
+        : stat('À votre rythme', 'Aucun versement régulier', `${money(Math.ceil(safety.gap / 12 / 1000) * 1000)} par mois l'atteindraient en un an`);
+    } else if (safety.surplus > 0) {
+      pace = stat(`Au-delà de ${max} mois`, money(safety.surplus), 'disponibles pour un placement de long terme (voir « PEA »)');
+    } else {
+      pace = stat('Marge', money(ctx.summary.balance - safety.low), `au-dessus de ${min} mois`);
+    }
+    const stats = h('dl', 'sv-stats sv-stats--row',
+      stat('Dépenses moyennes mesurées', `${money(expenses.average)} / mois`,
+        expenses.months.length > 1 ? `de ${money(expenses.min)} à ${money(expenses.max)} selon le mois` : 'sur un seul mois pour l\'instant'),
+      target(min, safety.low), target(max, safety.high), pace);
+    body.append(value, rail, ticks, stats,
+      h('p', 'card__hint', `Dépenses${holderNote} hors épargne et virements entre comptes, sur les derniers mois complets importés : ${detail}. Seuls les livrets comptent : ils sont disponibles à tout moment, sans risque de perte.`));
+    setWidths([[fill, safety.months / scale]], ctx.animate);
+  },
+};
+
+// ——— PEA ——————————————————————————————————————————————————————————————
+
+const pea = {
+  id: 'pea',
+  title: 'PEA : rendement des indices et fiscalité',
+  description: 'Rendement moyen des grands indices d\'actions (monde, États-Unis, France) et imposition moyenne d\'un PEA selon sa durée.',
+  wide: true,
+  hint: (ctx) => {
+    const g = globalAverage(ctx.peaYears, ctx.ref.annual);
+    return `Performances annuelles ${g.from}–${g.to} en euros, dividendes réinvestis, hors frais d'ETF (souvent 0,1 à 0,4 % par an). Les performances passées ne préjugent pas des performances futures.`;
+  },
+  control(ctx) {
+    const field = h('fieldset', 'segmented');
+    field.append(h('legend', 'visually-hidden', 'Période de calcul des moyennes'));
+    for (const n of [5, 10]) {
+      const input = document.createElement('input');
+      Object.assign(input, { type: 'radio', name: 'sv-pea-years', value: String(n), checked: n === ctx.peaYears });
+      field.append(h('label', null, input, h('span', null, `${n} ans`)));
+    }
+    field.addEventListener('change', (e) => ctx.setPeaYears(Number(e.target.value)));
+    return field;
+  },
+  render(body, ctx) {
+    const n = ctx.peaYears;
+    const global = globalAverage(n, ctx.ref.annual);
+    const after = taxOnExit(global.cagr, 10, PEA.taxAfter);
+    const livretRate = ctx.summary.rate / 100;
+
+    // Trois chiffres clés
+    const tile = (label, value, note) => h('div', 'sv-kpi', h('dt', null, label), h('dd', null, value), h('small', null, note));
+    const kpis = h('dl', 'sv-kpis',
+      tile('Rendement moyen des indices mondiaux', h('span', 'sv-num', `${pct1(global.cagr)} / an`),
+        h('span', null, `MSCI World et MSCI ACWI, ${global.from}–${global.to} · `, realBadge(global.real, ' après inflation'))),
+      tile(`Imposition d'un PEA de plus de ${PEA.years} ans`, h('span', 'sv-num', `${pctOf(PEA.taxAfter)} des gains`),
+        `soit ${pct1(after.onWithdrawal)} en moyenne de la somme retirée après 10 ans à ce rythme : les versements ne sont jamais imposés`),
+      tile('Rendement net d\'un PEA sur 10 ans', h('span', 'sv-num', `${pct1(after.netRate)} / an`),
+        h('span', null, `prélèvements sociaux payés · ${signedPoints(Math.round((after.netRate - livretRate) * 1000) / 10)} face à vos livrets (${pctOf(ctx.summary.rate)})`)));
+
+    // Indice par indice
+    const table = h('table', 'sv-table sv-table--pea');
+    table.append(h('caption', 'visually-hidden', `Rendement des indices sur ${n} ans`));
+    table.append(h('thead', null, h('tr', null, h('th', null, 'Indice'), h('th', 'num', `Moyenne ${n} ans`),
+      h('th', 'num', 'Après inflation'), h('th', 'num', 'Net PEA, 10 ans'), h('th', 'num', 'Pire année'))));
+    const tbody = h('tbody');
+    for (const index of INDEX_RETURNS) {
+      const st = indexStats(index, n, ctx.ref.annual);
+      const th = h('th', null, h('strong', null, index.name), h('small', null, index.note));
+      th.scope = 'row';
+      tbody.append(h('tr', null, th,
+        h('td', 'num', `${pct1(st.cagr)} / an`),
+        h('td', 'num', st.real == null ? '—' : realBadge(st.real)),
+        h('td', 'num', `${pct1(taxOnExit(st.cagr, 10, PEA.taxAfter).netRate)} / an`),
+        h('td', 'num', realBadge(st.worst.rate, ` (${st.worst.year})`))));
+    }
+    table.append(tbody);
+
+    // Imposition moyenne selon la durée de détention
+    const taxTable = h('table', 'sv-table sv-table--compact sv-table--pea');
+    taxTable.append(h('caption', 'visually-hidden', 'Imposition moyenne selon la durée de détention'));
+    taxTable.append(h('thead', null, h('tr', null, h('th', null, 'Retrait après'), h('th', 'num', 'Taux sur les gains'),
+      h('th', 'num', 'Part du retrait prélevée'), h('th', 'num', 'Net PEA / an'), h('th', 'num', 'Net compte-titres / an'))));
+    const taxBody = h('tbody');
+    for (const y of [3, 5, 8, 10, 15, 20]) {
+      const rate = peaTax(y);
+      const onPea = taxOnExit(global.cagr, y, rate);
+      const onCto = taxOnExit(global.cagr, y, TAX.pfu);
+      const th = h('th', null, years(y), y < PEA.years ? h('small', null, 'le retrait clôture le plan') : null);
+      th.scope = 'row';
+      taxBody.append(h('tr', null, th, h('td', 'num', pctOf(rate)), h('td', 'num', pct1(onPea.onWithdrawal)),
+        h('td', 'num', pct1(onPea.netRate)), h('td', 'num', pct1(onCto.netRate))));
+    }
+    taxTable.append(taxBody);
+
+    const world = indexStats(INDEX_RETURNS[0], n, ctx.ref.annual);
+    const parts = [kpis, h('div', 'sv-table__wrap', table)];
+
+    // Le surplus du matelas, placé 10 ans
+    if (ctx.safety?.surplus > 0) {
+      const sum = Math.round(ctx.safety.surplus / 10000) * 10000;
+      const onPea = netValue(sum, global.cagr, 10, PEA.taxAfter);
+      const onLivret = Math.round(sum * (1 + livretRate) ** 10);
+      parts.push(h('p', 'sv-verdict', `Les ${money(sum)} au-delà de ${SAFETY_MONTHS.max} mois de dépenses, placés 10 ans : environ ${money(onPea)} sur un PEA aux rendements passés des indices mondiaux (prélèvements sociaux payés), contre ${money(onLivret)} sur vos livrets au taux actuel.`));
+    }
+
+    parts.push(
+      h('p', 'card__hint', `Le risque : pire année ${signedPct(world.worst.rate)} (${world.worst.year}) pour le MSCI World, ${world.negative} année${world.negative > 1 ? 's' : ''} négative${world.negative > 1 ? 's' : ''} sur ${world.years}. Le capital n'est pas garanti : un PEA convient à l'argent dont vous n'aurez pas besoin avant ${PEA.years} ans au moins, une fois le matelas de sécurité en place.`),
+      h('h4', 'sv-widget__sub', 'Imposition moyenne selon la durée'),
+      h('div', 'sv-table__wrap', taxTable),
+      h('p', 'card__hint', `Seuls les gains sont imposés, au retrait. Avant ${PEA.years} ans : ${pctOf(TAX.pfu)} (${pctOf(TAX.incomeTax)} d'impôt + ${pctOf(TAX.social)} de prélèvements sociaux) et clôture du plan. Après ${PEA.years} ans : ${pctOf(PEA.taxAfter)} de prélèvements sociaux seulement, retraits partiels possibles sans clôture. Compte-titres : ${pctOf(TAX.pfu)} quelle que soit la durée (calcul simplifié : ses dividendes sont en réalité imposés chaque année). Plafond des versements : ${money(PEA.cap)} par personne. Calculs au rendement moyen des indices mondiaux sur ${n} ans (${pct1(global.cagr)} / an).`),
+    );
+    body.append(...parts);
   },
 };
 
@@ -465,5 +602,5 @@ const projection = {
   },
 };
 
-export const WIDGETS = [bulletin, gainReel, comparateur, projection, indices, doublement, historique, matelas];
+export const WIDGETS = [bulletin, matelas, gainReel, comparateur, pea, projection, indices, doublement, historique];
 export const widgetById = new Map(WIDGETS.map((w) => [w.id, w]));

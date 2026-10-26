@@ -8,10 +8,13 @@
  *  - Temps de doublement : ln 2 ÷ ln(1 + taux) — la « règle de 72 » (72 ÷ taux en %)
  *    en est l'approximation de tête. Si le rendement réel est négatif, on calcule à
  *    l'inverse le temps pour que le pouvoir d'achat soit divisé par deux.
- *  - Épargne de précaution : solde des livrets ÷ dépenses mensuelles moyennes.
+ *  - Épargne de précaution (matelas de sécurité) : solde des livrets ÷ dépenses mensuelles
+ *    moyennes mesurées dans les relevés ; la fourchette la plus citée est de 3 à 6 mois.
  */
 import { OFF_BUDGET_KINDS } from '../db/schema.js';
-import { ANNUAL_INFLATION, BENCHMARKS, OFFICIAL_RATES, TAX, rateOn } from './livret-rates.js';
+import {
+  ANNUAL_INFLATION, BENCHMARKS, OFFICIAL_RATES, SAFETY_MONTHS, TAX, rateOn,
+} from './livret-rates.js';
 
 export const realRate = (ratePct, inflationPct) => (1 + ratePct / 100) / (1 + inflationPct / 100) - 1;
 
@@ -85,15 +88,37 @@ export function history(rates, products, annual = ANNUAL_INFLATION) {
 
 /**
  * Dépenses mensuelles moyennes (hors épargne et virements) des titulaires des
- * livrets, sur les derniers mois complets importés (3 au plus).
+ * livrets, sur les derniers mois complets importés (3 au plus), avec le total de chaque mois.
  */
 export function monthlyExpenses(transactions, categories, profiles, currentMonth, count = 3) {
   const kinds = new Map(categories.map((c) => [c.id, c.kind]));
   const months = [...new Set(transactions.map((t) => t.month))].filter((m) => m < currentMonth).sort().slice(-count);
   if (!months.length) return null;
-  const spent = transactions
-    .filter((t) => months.includes(t.month) && profiles.has(t.profile) && t.type === 'sortie'
-      && !OFF_BUDGET_KINDS.includes(kinds.get(t.categoryId)))
-    .reduce((s, t) => s + t.amount, 0);
-  return { average: Math.round(spent / months.length), months };
+  const byMonth = new Map(months.map((m) => [m, 0]));
+  for (const t of transactions) {
+    if (!byMonth.has(t.month) || !profiles.has(t.profile) || t.type !== 'sortie' || OFF_BUDGET_KINDS.includes(kinds.get(t.categoryId))) continue;
+    byMonth.set(t.month, byMonth.get(t.month) + t.amount);
+  }
+  const totals = [...byMonth.values()];
+  const spent = totals.reduce((s, v) => s + v, 0);
+  return { average: Math.round(spent / months.length), months, byMonth, min: Math.min(...totals), max: Math.max(...totals) };
+}
+
+/**
+ * Matelas de sécurité : combien de mois de dépenses les livrets couvrent, l'écart avec la
+ * fourchette conseillée et, s'il manque de quoi l'atteindre, le temps qu'il faudra au
+ * rythme des versements réguliers.
+ */
+export function safetyNet(balance, expenses, monthlyPlan = 0, range = SAFETY_MONTHS) {
+  if (!expenses?.average) return null;
+  const months = balance / expenses.average;
+  const low = range.min * expenses.average;
+  const high = range.max * expenses.average;
+  const gap = Math.max(0, low - balance);
+  const surplus = Math.max(0, balance - high);
+  const status = months < range.min ? 'court' : months > range.max ? 'large' : 'conseille';
+  return {
+    months, low, high, gap, surplus, status,
+    reachIn: gap > 0 && monthlyPlan > 0 ? Math.ceil(gap / monthlyPlan) : null,
+  };
 }

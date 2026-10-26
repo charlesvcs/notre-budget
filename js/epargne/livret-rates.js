@@ -41,7 +41,9 @@ export const OFFICIAL_INFLATION = { rate: 3.1, month: '2026-09' };
 export const INFLATION_INDICES = { month: '2026-09', ipch: 3.4, core: 1.5 };
 
 /** Inflation moyenne annuelle (IPC, INSEE). */
-export const ANNUAL_INFLATION = { 2020: 0.5, 2021: 1.6, 2022: 5.2, 2023: 4.9, 2024: 2.0, 2025: 0.9 };
+export const ANNUAL_INFLATION = {
+  2016: 0.2, 2017: 1.0, 2018: 1.8, 2019: 1.1, 2020: 0.5, 2021: 1.6, 2022: 5.2, 2023: 4.9, 2024: 2.0, 2025: 0.9,
+};
 
 /**
  * Placements sans risque de référence, pour comparer.
@@ -59,8 +61,9 @@ export const BENCHMARKS = {
  * Fiscalité 2026 des placements imposés (LFSS 2026) : prélèvement forfaitaire unique de
  * 31,4 % (12,8 % d'impôt + 18,6 % de prélèvements sociaux) ; l'assurance-vie reste à
  * 17,2 % de prélèvements sociaux. Livret A et LEP : aucun impôt ni prélèvement.
+ * PEA de plus de 5 ans : prélèvements sociaux seuls (18,6 %) sur les gains.
  */
-export const TAX = { pfu: 31.4, socialAssuranceVie: 17.2 };
+export const TAX = { pfu: 31.4, incomeTax: 12.8, social: 18.6, socialAssuranceVie: 17.2 };
 
 /**
  * Valeurs de référence pour les calculs : celles récupérées automatiquement

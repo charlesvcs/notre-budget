@@ -5,6 +5,7 @@
  */
 import { Workbook, colName, excelDate } from '../export/xlsx-writer.js';
 import { benchmarks, grossEquivalent, history } from './indicators.js';
+import { INDEX_RETURNS, PEA, yearsOf } from './pea.js';
 import { PRODUCTS, SAFETY_MONTHS, TAX } from './livret-rates.js';
 import { INSEE_SERIES, SOURCES } from './live-data.js';
 import { bulletinItems } from './widgets.js';
@@ -51,7 +52,10 @@ export function buildEpargneWorkbook(ctx, data) {
     const holderNote = ctx.holders ? ` de ${ctx.holders}` : '';
     syn.row(['Dépenses mensuelles moyennes', { v: eur(ctx.expenses.average), s: 'euro' }, `Dépenses${holderNote}, hors épargne et virements (${ctx.expenses.months.map(monthLong).join(', ')})`]);
     const row = syn.rows.length;
-    syn.row(['Épargne de précaution', { f: `B${r.total}/B${row}`, v: summary.balance / ctx.expenses.average, s: 'months' }, `Solde ÷ dépenses mensuelles ; fourchette souvent conseillée : ${SAFETY_MONTHS.min} à ${SAFETY_MONTHS.max} mois`]);
+    syn.row(['Matelas de sécurité (mois de dépenses)', { f: `B${r.total}/B${row}`, v: summary.balance / ctx.expenses.average, s: 'months' }, `Solde des livrets ÷ dépenses mensuelles moyennes ; fourchette souvent conseillée : ${SAFETY_MONTHS.min} à ${SAFETY_MONTHS.max} mois`]);
+    for (const n of [SAFETY_MONTHS.min, SAFETY_MONTHS.max]) {
+      syn.row([`Objectif ${n} mois`, { f: `${n}*B${row}`, v: n * eur(ctx.expenses.average), s: 'euro' }, `${n} × dépenses mensuelles moyennes`]);
+    }
   }
   syn.blank();
   const head = syn.row(['Livret', 'Solde', 'Taux', 'Intérêts sur 12 mois', 'Hausse des prix', 'Gain réel'], 'header');
@@ -275,6 +279,63 @@ export function buildEpargneWorkbook(ctx, data) {
     });
   }
 
+  // ——— PEA : indices ——————————————————————————————————————————————
+  const peaYears = yearsOf(INDEX_RETURNS[0]);
+  const ix = wb.addSheet('PEA indices', { widths: [10, ...INDEX_RETURNS.map(() => 16), 16], freeze: 1 });
+  ix.row(['Année', ...INDEX_RETURNS.map((i) => i.name), 'Inflation (IPC)'], 'header');
+  peaYears.forEach((y) => {
+    ix.row([String(y), ...INDEX_RETURNS.map((i) => ({ v: frac(i.returns[y]), s: 'percent' })),
+      ctx.ref.annual[y] == null ? '' : { v: frac(ctx.ref.annual[y]), s: 'percent' }]);
+  });
+  const ixLast = peaYears.length + 1;
+  const ixInfl = colName(1 + INDEX_RETURNS.length);
+  // SOMMEPROD accepte les plages sans formule matricielle
+  const cagr = (col, from) => `EXP(SUMPRODUCT(LN(1+${col}${from}:${col}${ixLast}))/${ixLast - from + 1})-1`;
+  const cagrValue = (index, count) => peaYears.slice(-count).reduce((g, y) => g * (1 + frac(index.returns[y])), 1) ** (1 / count) - 1;
+  ix.row([]);
+  for (const count of [10, 5]) {
+    const from = ixLast - count + 1;
+    ix.row([{ v: `Moyenne ${count} ans (par an)`, s: 'bold' },
+      ...INDEX_RETURNS.map((i, k) => ({ f: cagr(colName(1 + k), from), v: cagrValue(i, count), s: 'percentBold' })),
+      { f: cagr(ixInfl, from), v: peaYears.slice(-count).reduce((g, y) => g * (1 + frac(ctx.ref.annual[y] ?? 0)), 1) ** (1 / count) - 1, s: 'percent' }]);
+  }
+  const avgRow = ixLast + 2;
+  ix.row([{ v: 'Net PEA 10 ans (par an)', s: 'bold' }, ...INDEX_RETURNS.map((i, k) => {
+    const c = colName(1 + k);
+    const rate = cagrValue(i, 10);
+    return { f: `(1+((1+${c}${avgRow})^10-1)*(1-${(PEA.taxAfter / 100).toFixed(3)}))^(1/10)-1`, v: (1 + ((1 + rate) ** 10 - 1) * (1 - PEA.taxAfter / 100)) ** 0.1 - 1, s: 'percent' };
+  })]);
+  ix.row([]);
+  ix.row([{ v: 'Performances annuelles en euros, dividendes réinvestis, hors frais d\'ETF. Moyenne = taux annuel composé : (Π (1 + performance))^(1/n) − 1. Net PEA : prélèvements sociaux payés sur les gains au retrait, après 10 ans. Les performances passées ne préjugent pas des performances futures.', s: 'note' }]);
+  ix.merge(`A${ixLast + 6}:${ixInfl}${ixLast + 6}`);
+  ix.chart({
+    type: 'col', title: 'Performances annuelles en euros, dividendes réinvestis', from: `A${ixLast + 8}`, to: `${ixInfl}${ixLast + 28}`, percent: true,
+    categories: `A2:A${ixLast}`,
+    series: INDEX_RETURNS.slice(0, 2).map((i, k) => ({ name: i.name, ref: `${colName(1 + k)}2:${colName(1 + k)}${ixLast}`, color: k ? ROSE : VIOLET })),
+  });
+
+  // ——— PEA : fiscalité ————————————————————————————————————————————
+  const fis = wb.addSheet('PEA fiscalité', { widths: [16, 14, 14, 18, 22, 16, 20], freeze: 4 });
+  const worldRate = cagrValue(INDEX_RETURNS[0], 10);
+  fis.row([{ v: 'Imposition moyenne d\'un PEA selon la durée', s: 'title' }]);
+  fis.row(['Rendement retenu (par an)', { f: `'PEA indices'!B${avgRow}`, v: worldRate, s: 'percent' }, 'MSCI World, moyenne 10 ans (modifiable)']);
+  fis.blank();
+  fis.row(['Retrait après (ans)', 'Taux sur les gains', 'Valeur de 100', 'Part des gains', 'Part du retrait prélevée', 'Net PEA / an', 'Net compte-titres / an'], 'header');
+  for (const y of [3, 5, 8, 10, 15, 20]) {
+    const n = fis.rows.length + 1;
+    const tax = y < PEA.years ? PEA.taxBefore : PEA.taxAfter;
+    const growth = (1 + worldRate) ** y;
+    fis.row([{ v: y, s: 'number' }, { v: frac(tax), s: 'percent' },
+      { f: `100*(1+$B$2)^A${n}`, v: 100 * growth, s: 'number' },
+      { f: `(C${n}-100)/C${n}`, v: (growth - 1) / growth, s: 'percent' },
+      { f: `D${n}*B${n}`, v: (growth - 1) / growth * frac(tax), s: 'percentBold' },
+      { f: `((100+(C${n}-100)*(1-B${n}))/100)^(1/A${n})-1`, v: (1 + (growth - 1) * (1 - frac(tax))) ** (1 / y) - 1, s: 'percentBold' },
+      { f: `((100+(C${n}-100)*(1-${TAX.pfu / 100}))/100)^(1/A${n})-1`, v: (1 + (growth - 1) * (1 - TAX.pfu / 100)) ** (1 / y) - 1, s: 'percent' }]);
+  }
+  fis.row([]);
+  fis.row([{ v: `Seuls les gains sont imposés, au retrait. Avant ${PEA.years} ans : ${TAX.pfu.toLocaleString('fr-FR')} % (${TAX.incomeTax.toLocaleString('fr-FR')} % d'impôt + ${TAX.social.toLocaleString('fr-FR')} % de prélèvements sociaux) et clôture du plan. Après ${PEA.years} ans : ${TAX.social.toLocaleString('fr-FR')} % de prélèvements sociaux. Plafond des versements : ${(PEA.cap / 100).toLocaleString('fr-FR')} €. Compte-titres simplifié : imposé au retrait.`, s: 'note' }]);
+  fis.merge(`A${fis.rows.length}:G${fis.rows.length}`);
+
   // ——— Taux ——————————————————————————————————————————————————————
   const tx = wb.addSheet('Taux', { widths: [16, 12, 12, 22], freeze: 1 });
   tx.row(['Date d\'effet', 'Livret A', 'LEP', 'Origine'], 'header');
@@ -297,6 +358,9 @@ export function buildEpargneWorkbook(ctx, data) {
     ['Gain réel sur 12 mois', 'Solde × taux − solde × inflation, au solde actuel.'],
     ['Brut équivalent', `Taux net ÷ (1 − ${TAX.pfu.toLocaleString('fr-FR')} %) : ce qu'un placement imposé au prélèvement forfaitaire devrait rapporter pour faire aussi bien.`],
     ['Temps de doublement', 'ln 2 ÷ ln(1 + taux) ; règle de 72 : 72 ÷ taux en %.'],
+    ['Matelas de sécurité', 'Solde des livrets ÷ dépenses mensuelles moyennes des titulaires (3 derniers mois complets importés, hors épargne et virements).'],
+    ['Rendement moyen des indices', 'Taux annuel composé : (Π (1 + performance annuelle))^(1/n) − 1, en euros, dividendes réinvestis.'],
+    ['Imposition moyenne d\'un PEA', 'Taux sur les gains × part des gains dans la somme retirée ; rendement net = ((1 + gains × (1 − taux)))^(1/n) − 1.'],
     ['Solde de départ', 'Reconstitué à partir du solde saisi et des virements des relevés importés (calcul linéaire en le solde de départ).'],
   ]) src.row([{ v: k, s: 'bold' }, { v, s: 'note' }]);
   src.blank();
@@ -309,6 +373,11 @@ export function buildEpargneWorkbook(ctx, data) {
     ['Taux du Livret A et du LEP', ctx.official?.livrets?.source === 'cdc' ? SOURCES.cdc.url : SOURCES.servicePublic.url],
     ['Fonds euros 2025 (ACPR)', 'https://www.boursorama.com/epargne/assurance-vie/actualites/assurance-vie-en-2025-les-fonds-en-euros-ont-rapporte-2-65-en-moyenne-2520758cb9fc4554af651b0d697fa8a6'],
     ['Prélèvement forfaitaire 2026', 'https://www.hagnere-patrimoine.fr/guides-patrimoine/comment-payer-moins-impots/prelevement-liberatoire-interets-2026'],
+    ['MSCI World (EUR), performances nettes', 'https://www.msci.com/documents/10199/890dd84d-3750-4656-87f2-1229ed5a5d6e'],
+    ['MSCI ACWI (EUR), performances nettes', 'https://www.msci.com/documents/10199/1ee87397-6313-4f46-87ae-6761f666558e'],
+    ['CAC 40 dividendes réinvestis', 'https://www.zonebourse.com/cours/indice/CAC-40-DIVIDENDES-REINVES-3869660/cotations/'],
+    ['S&P 500 en euros, dividendes réinvestis', 'https://www.eupersonalfinance.eu/articles/average-annual-return-sp500'],
+    ['Fiscalité du PEA en 2026 (CSG à 10,6 %)', 'https://placement.meilleurtaux.com/bourse/actualites/2025-decembre/csg-10-6-impact-pea-avant-apres-5-ans.html'],
   ]) src.row([{ v: k, s: 'bold' }, { v, s: 'link' }]);
 
   return wb;

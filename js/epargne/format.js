@@ -8,6 +8,7 @@ const signedPercentFormat = new Intl.NumberFormat('fr-FR', {
 });
 const dateLong = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const monthLongFormat = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const monthShortFormat = new Intl.DateTimeFormat('fr-FR', { month: 'short', timeZone: 'UTC' });
 const yearsFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 const pointsFormat = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
 
@@ -18,11 +19,16 @@ export const moneyExact = (cents) => minus(euro2.format(cents / 100));
 export const signedMoney = (cents) => (Math.round(cents / 100) > 0 ? '+' : '') + money(cents);
 /** Taux exprimé en % (1.7 → « 1,7 % »). */
 export const pctOf = (rate) => percent.format(rate / 100);
+const percent1 = new Intl.NumberFormat('fr-FR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+/** Fraction à une décimale (0.1107 → « 11,1 % ») : rendements de marché, pas de fausse précision. */
+export const pct1 = (fraction) => percent1.format(fraction);
 /** Fraction signée (−0.014 → « −1,4 % »). */
 export const signedPct = (fraction) => minus(signedPercentFormat.format(fraction));
 export const asDate = (iso) => new Date(`${iso}T00:00:00Z`);
 export const longDate = (iso) => dateLong.format(asDate(iso)).replace(/^1 /, '1er ');
 export const monthLong = (month) => monthLongFormat.format(asDate(`${month}-01`));
+/** « sept. », « juil. » */
+export const monthShort = (month) => monthShortFormat.format(asDate(`${month}-01`));
 /** Écart entre deux taux en points de pourcentage : « +0,4 pt », « −1,2 pt ». */
 export const signedPoints = (diff) => `${diff >= 0 ? '+' : '−'}${pointsFormat.format(Math.abs(diff))} pt`;
 export const years = (n) => `${yearsFormat.format(n)} an${Math.round(n) > 1 ? 's' : ''}`;

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mon Budget</title>
-  <meta name="description" content="Suivi de budget et d'épargne, 100 % local.">
+  <meta name="description" content="Suivi de budget, d'épargne et de patrimoine, 100 % local.">
 
   <!-- Tout est servi depuis l'app ; seules exceptions : la lecture de séries publiques
        (INSEE, BCE, Caisse des Dépôts), sans aucune donnée personnelle envoyée -->
@@ -13,8 +13,8 @@
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#F4F1FF" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#120E22" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F6F5F0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E141D" media="(prefers-color-scheme: dark)">
 
   <!-- iOS -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -37,43 +37,49 @@
       <img src="icons/icon.svg" width="28" height="28" alt="">
       <span>Mon Budget</span>
     </a>
+    <nav class="app-nav" id="app-nav" aria-label="Navigation principale">
+      <a class="app-nav__link" href="#/mois" data-route="mois"><span class="app-nav__dot" aria-hidden="true"></span>Le mois</a>
+      <a class="app-nav__link" href="#/epargne" data-route="epargne"><span class="app-nav__dot" aria-hidden="true"></span>Épargne</a>
+      <a class="app-nav__link" href="#/investir" data-route="investir"><span class="app-nav__dot" aria-hidden="true"></span>Investissement</a>
+      <a class="app-nav__link" href="#/importer" data-route="importer"><span class="app-nav__dot" aria-hidden="true"></span>Importer</a>
+      <a class="app-nav__link" href="#/sauvegarde" data-route="sauvegarde"><span class="app-nav__dot" aria-hidden="true"></span>Sauvegarde</a>
+    </nav>
     <button type="button" class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="menu-panel" data-route="mois">
       <span class="menu-btn__dot" aria-hidden="true"></span>
       <span class="menu-btn__label" id="menu-current">Le mois</span>
       <span class="menu-btn__burger" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span class="visually-hidden"> — menu</span>
+      <span class="visually-hidden"> : menu</span>
     </button>
   </header>
 
-  <!-- Menu principal : s'ouvre depuis le bouton pilule de la barre -->
+  <!-- Menu principal sur mobile et tablette -->
   <div class="menu-backdrop" id="menu-backdrop" aria-hidden="true"></div>
   <nav class="menu-panel" id="menu-panel" aria-label="Sections">
-    <p class="menu-panel__title">Où allons-nous ?</p>
+    <p class="menu-panel__title">Navigation</p>
     <ul class="menu-list">
         <li><a class="menu-item" href="#/mois" data-route="mois">
           <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>
           <span class="menu-item__text"><strong>Le mois</strong><small>Reste à vivre, enveloppes, opérations</small></span>
-          <span class="menu-item__here">Ici</span>
         </a></li>
         <li><a class="menu-item" href="#/epargne" data-route="epargne">
           <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="6.5" rx="7" ry="3"/><path d="M5 6.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/><path d="M5 11.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
-          <span class="menu-item__text"><strong>Épargne</strong><small>Livrets, intérêts, matelas de sécurité</small></span>
-          <span class="menu-item__here">Ici</span>
+          <span class="menu-item__text"><strong>Épargne</strong><small>Livrets, projections annuelles, sécurité</small></span>
         </a></li>
         <li><a class="menu-item" href="#/investir" data-route="investir">
           <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>
-          <span class="menu-item__text"><strong>Investissement</strong><small>PEA, objectifs et stratégies</small></span>
-          <span class="menu-item__here">Ici</span>
+          <span class="menu-item__text"><strong>Investissement</strong><small>Patrimoine global, PEA et projections</small></span>
         </a></li>
         <li><a class="menu-item" href="#/importer" data-route="importer">
           <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9.5 14.5 12 12l2.5 2.5"/></svg></span>
           <span class="menu-item__text"><strong>Importer</strong><small>Relevés PDF de votre banque</small></span>
-          <span class="menu-item__here">Ici</span>
         </a></li>
         <li><a class="menu-item" href="#/sauvegarde" data-route="sauvegarde">
           <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
           <span class="menu-item__text"><strong>Sauvegarde</strong><small>Chiffrée, vers l'iPhone par AirDrop</small></span>
-          <span class="menu-item__here">Ici</span>
+        </a></li>
+        <li><a class="menu-item" href="#/cgv" data-route="cgv">
+          <span class="menu-item__icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
+          <span class="menu-item__text"><strong>CGV et mentions légales</strong><small>Conditions d'utilisation et confidentialité</small></span>
         </a></li>
     </ul>
     <p class="menu-panel__foot">100 % local · vos données restent sur cet appareil</p>
@@ -81,7 +87,7 @@
 
   <main id="app">
 
-    <!-- ——— Tableau de bord du mois ——— -->
+    <!-- Tableau de bord du mois -->
     <section class="dash" id="view-mois" data-view="mois" aria-labelledby="dash-month">
       <div class="dash__toolbar">
         <div class="month-nav">
@@ -97,6 +103,7 @@
         <fieldset class="segmented" id="dash-view">
           <legend class="visually-hidden">Afficher le budget de (double-clic sur un nom pour le changer)</legend>
         </fieldset>
+        <button type="button" class="btn btn--ghost btn--small" id="dash-export">Exporter le bilan Excel</button>
       </div>
 
       <p class="backup-banner" id="backup-banner" hidden>
@@ -142,7 +149,7 @@
         </div>
       </article>
 
-      <!-- Catégories & enveloppes : le cœur de l'analyse -->
+      <!-- Catégories et enveloppes -->
       <article class="card cats-card" id="cats-card" aria-labelledby="cats-title">
         <header class="card__head card__head--row">
           <div>
@@ -292,15 +299,15 @@
       </article>
     </section>
 
-    <!-- ——— Investir : portefeuilles, objectifs, stratégies ——— -->
+    <!-- Investir : patrimoine global, portefeuilles, objectifs, stratégies -->
     <section class="savings invest" id="view-investir" data-view="investir" aria-labelledby="inv-title" hidden>
       <header class="savings__head">
         <div>
-          <h1 id="inv-title">Investissement</h1>
-          <p class="savings__lede">Vos portefeuilles, vos objectifs, et ce que chaque stratégie permet d'en attendre.</p>
+          <h1 id="inv-title">Investissement &amp; Patrimoine</h1>
+          <p class="savings__lede">Vue d'ensemble de votre patrimoine actuel (livrets et PEA) et projections détaillées année par année.</p>
         </div>
         <div class="savings__actions">
-          <button type="button" class="btn btn--ghost btn--small" id="inv-export">Exporter en Excel</button>
+          <button type="button" class="btn btn--ghost btn--small" id="inv-export">Exporter le bilan Excel</button>
           <button type="button" class="btn btn--ghost btn--small" id="inv-pea-add" hidden>Ajouter un PEA</button>
           <button type="button" class="btn btn--ghost btn--small" id="inv-goal-add">Ajouter un objectif</button>
         </div>
@@ -313,9 +320,12 @@
 
       <dl class="sv-kpis" id="inv-kpis"></dl>
 
-      <h2 class="invest__title">Vos portefeuilles</h2>
+      <!-- Synthèse et projection du patrimoine global (Livrets + PEA) -->
+      <article class="card patrimoine-card" id="inv-patrimoine" aria-labelledby="inv-patrimoine-title" hidden></article>
+
+      <h2 class="invest__title">Vos portefeuilles PEA</h2>
       <article class="card" id="inv-pea-empty" hidden>
-        <p class="card__empty">Aucun PEA pour l'instant. Indiquez vos ETF et leur valeur : l'app calcule la plus-value, la fiscalité selon l'âge du plan, et projette vos versements mensuels.</p>
+        <p class="card__empty">Aucun PEA pour l'instant. Indiquez vos ETF et leur valeur : l'application calcule la plus-value, la fiscalité selon l'âge du plan, et affiche le tableau complet de vos projections annuelles.</p>
         <div class="sv-actions"><button type="button" class="btn btn--primary btn--small" id="inv-pea-empty-add">Ajouter un PEA</button></div>
       </article>
       <div class="sv-pea-list" id="inv-pea" hidden></div>
@@ -326,7 +336,7 @@
         <p class="card__hint" id="inv-market-note"></p>
       </article>
       <article class="card" id="inv-goals-empty" hidden>
-        <p class="card__empty">Aucun objectif pour l'instant : un apport, des études, la retraite… Indiquez un montant et une date, l'app le confronte aux stratégies livrets, prudente, équilibrée et dynamique.</p>
+        <p class="card__empty">Aucun objectif pour l'instant : un apport, des études, la retraite… Indiquez un montant et une date, l'application le confronte aux stratégies livrets, prudente, équilibrée et dynamique.</p>
       </article>
       <div class="sv-pea-list" id="inv-goals"></div>
 
@@ -339,15 +349,15 @@
       </article>
     </section>
 
-    <!-- ——— Épargne : livrets réglementés ——— -->
+    <!-- Épargne : livrets réglementés -->
     <section class="savings" id="view-epargne" data-view="epargne" aria-labelledby="sv-title" hidden>
       <header class="savings__head">
         <div>
           <h1 id="sv-title">Épargne</h1>
-          <p class="savings__lede">Vos livrets, leurs intérêts, et ce qu'ils valent vraiment une fois l'inflation passée.</p>
+          <p class="savings__lede">Vos livrets, leurs intérêts, et leurs projections annuelles en euros courants et constants.</p>
         </div>
         <div class="savings__actions">
-          <button type="button" class="btn btn--ghost btn--small" id="sv-export" hidden>Exporter en Excel</button>
+          <button type="button" class="btn btn--ghost btn--small" id="sv-export" hidden>Exporter le bilan Excel</button>
           <button type="button" class="btn btn--ghost btn--small" id="sv-add" hidden>Ajouter un livret</button>
         </div>
       </header>
@@ -361,7 +371,7 @@
       <article class="card sv-setup" id="sv-setup" aria-labelledby="sv-setup-title" hidden>
         <header class="card__head">
           <h2 id="sv-setup-title">Suivre vos livrets</h2>
-          <p class="card__hint">Indiquez le solde que votre banque affiche aujourd'hui. L'app retrouve ensuite les virements dans vos relevés et calcule les intérêts, quinzaine par quinzaine.</p>
+          <p class="card__hint">Indiquez le solde que votre banque affiche aujourd'hui. L'application retrouve ensuite les virements dans vos relevés et calcule les intérêts, quinzaine par quinzaine.</p>
           <p class="card__hint" id="sv-setup-found"></p>
         </header>
         <form class="sv-setup__form" id="sv-setup-form" novalidate>
@@ -394,7 +404,7 @@
       <article class="card" id="sv-unmatched-card" aria-labelledby="sv-unmatched-title" hidden>
         <header class="card__head">
           <h2 id="sv-unmatched-title">Virements d'épargne à rattacher</h2>
-          <p class="card__hint">Ces virements vers l'épargne ne mentionnent pas clairement un de vos livrets. Indiquez où ils sont allés : l'app s'en souviendra. Vous pouvez aussi le faire depuis « Le mois », avec le crayon de la liste des opérations.</p>
+          <p class="card__hint">Ces virements vers l'épargne ne mentionnent pas clairement un de vos livrets. Indiquez où ils sont allés : l'application s'en souviendra. Vous pouvez aussi le faire depuis « Le mois », avec le crayon de la liste des opérations.</p>
         </header>
         <ul class="sv-moves" id="sv-unmatched"></ul>
       </article>
@@ -403,8 +413,8 @@
       <section class="sv-board" id="sv-board" aria-labelledby="sv-board-title" hidden>
         <header class="sv-board__head">
           <div>
-            <h2 id="sv-board-title">Tableau de bord</h2>
-            <p class="card__hint">Des indicateurs pour juger vos livrets. Choisissez ceux qui vous parlent avec « Personnaliser ».</p>
+            <h2 id="sv-board-title">Projections et indicateurs</h2>
+            <p class="card__hint">Simulez vos versements futurs et consultez vos indicateurs. Choisissez ceux qui vous parlent avec « Personnaliser ».</p>
           </div>
           <button type="button" class="btn btn--ghost btn--small" id="sv-board-edit">Personnaliser</button>
         </header>
@@ -466,7 +476,7 @@
       </article>
     </section>
 
-    <!-- ——— Sauvegarde chiffrée ——— -->
+    <!-- Sauvegarde chiffrée -->
     <section class="backup" id="view-sauvegarde" data-view="sauvegarde" aria-labelledby="backup-title" hidden>
       <header class="import__intro">
         <h1 id="backup-title">Sauvegarde</h1>
@@ -498,7 +508,7 @@
         <h2 id="backup-send-title">Envoyer sur l'iPhone</h2>
         <ol class="backup-steps">
           <li>Envoyez le fichier de sauvegarde par AirDrop sur votre iPhone.</li>
-          <li>Sur l'iPhone, ouvrez Mon Budget (l'app installée sur l'écran d'accueil), onglet « Sauvegarde ».</li>
+          <li>Sur l'iPhone, ouvrez Mon Budget (l'application installée sur l'écran d'accueil), onglet « Sauvegarde ».</li>
           <li>« Choisir le fichier… », puis votre mot de passe de sauvegarde.</li>
         </ol>
         <div class="backup-actions">
@@ -536,7 +546,7 @@
       </article>
     </section>
 
-    <!-- ——— Import de relevés ——— -->
+    <!-- Import de relevés -->
     <section class="import" id="view-importer" data-view="importer" aria-labelledby="import-title" hidden>
       <header class="import__intro">
         <h1 id="import-title">Importer un relevé</h1>
@@ -604,7 +614,68 @@
       </div>
     </section>
 
+    <!-- Conditions Générales (CGV / CGU) et Mentions Légales -->
+    <section class="cgv" id="view-cgv" data-view="cgv" aria-labelledby="cgv-title" hidden>
+      <header class="cgv__head">
+        <div>
+          <h1 id="cgv-title">Conditions Générales (CGV / CGU) &amp; Mentions Légales</h1>
+          <p class="cgv__meta">Dernière mise à jour : octobre 2026 · Application Mon Budget</p>
+        </div>
+        <a class="btn btn--ghost btn--small" href="#/mois">Retour au budget</a>
+      </header>
+
+      <article class="card cgv__section">
+        <h2>1. Objet et présentation du service</h2>
+        <p>Mon Budget est une application de suivi budgétaire, de gestion d'épargne réglementée (Livret A, LEP) et de projection patrimoniale (PEA, objectifs financiers). L'application fonctionne selon une architecture 100 % locale : toutes vos opérations, soldes, portefeuilles et préférences sont stockés exclusivement dans la mémoire locale de votre navigateur (IndexedDB) sur votre appareil.</p>
+      </article>
+
+      <article class="card cgv__section">
+        <h2>2. Tarification et conditions financières (CGV)</h2>
+        <p>L'utilisation de l'application Mon Budget est entièrement gratuite, sans abonnement, sans achat intégré et sans frais cachés. Aucune coordonnée bancaire ni aucun moyen de paiement n'est demandé pour accéder aux fonctionnalités de suivi, d'import PDF, de simulation patrimoniale ou d'export Excel (.xlsx).</p>
+      </article>
+
+      <article class="card cgv__section">
+        <h2>3. Absence de conseil en investissement et avertissement sur les projections</h2>
+        <p>Les outils de simulation, d'analyse d'épargne, de comparaison de stratégies et de projection de patrimoine (notamment sur les livrets réglementés, le Plan d'Épargne en Actions et les ETF) sont fournis à titre purement informatif et pédagogique.</p>
+        <ul>
+          <li>Les informations et projections présentées ne constituent en aucun cas un conseil en investissement financier (CIF), une recommandation personnalisée, une incitation à l'achat ou à la vente d'instruments financiers, ni un conseil fiscal ou juridique.</li>
+          <li>Les performances passées des indices boursiers (MSCI World, S&amp;P 500, CAC 40, Euro Stoxx 50, marchés émergents) ne préjugent pas des performances futures. L'investissement en actions comporte un risque de perte en capital.</li>
+          <li>La fiscalité simulée (prélèvements sociaux à 17,2 %, prélèvement forfaitaire unique à 30 % avant 5 ans) dépend de la législation en vigueur et de votre situation personnelle susceptible d'évoluer.</li>
+        </ul>
+      </article>
+
+      <article class="card cgv__section">
+        <h2>4. Confidentialité, données personnelles et RGPD</h2>
+        <p>Vos données financières vous appartiennent intégralement :</p>
+        <ul>
+          <li><strong>Aucun serveur distant :</strong> vos relevés bancaires PDF sont lus directement sur votre appareil. Aucune transaction, aucun solde et aucun document ne quittent votre navigateur.</li>
+          <li><strong>Séries publiques :</strong> lorsque la mise à jour automatique des indicateurs est activée, l'application interroge uniquement les flux publics officiels (INSEE pour l'inflation, BCE pour les taux directeurs, Caisse des Dépôts pour la collecte des livrets) sans transmettre la moindre donnée personnelle.</li>
+          <li><strong>Chiffrement des sauvegardes :</strong> les fichiers de sauvegarde exportés sont chiffrés localement en AES-GCM (256 bits) avec dérivation de clé PBKDF2 à partir du mot de passe que vous définissez.</li>
+        </ul>
+      </article>
+
+      <article class="card cgv__section">
+        <h2>5. Responsabilité de l'utilisateur et sauvegarde des données</h2>
+        <p>Étant donné que les données sont stockées uniquement sur votre appareil, la suppression des données de navigation, la réinitialisation du navigateur ou la perte de votre appareil entraîne la perte des données non sauvegardées. Il appartient à l'utilisateur d'effectuer régulièrement des sauvegardes chiffrées via l'onglet « Sauvegarde » ou des exports Excel et de conserver précieusement son mot de passe de chiffrement (aucune récupération de mot de passe n'étant techniquement possible sans serveur central).</p>
+      </article>
+
+      <article class="card cgv__section">
+        <h2>6. Propriété intellectuelle et droit applicable</h2>
+        <p>Le code, la structure, les algorithmes de calcul et les éléments graphiques de l'application Mon Budget sont protégés par le droit de la propriété intellectuelle. La police de caractères Nunito est distribuée sous licence SIL Open Font License (voir <code>fonts/OFL-Nunito.txt</code>) et la bibliothèque de lecture PDF (PDF.js) sous licence Apache 2.0. Les présentes conditions sont régies par le droit français.</p>
+      </article>
+    </section>
+
   </main>
+
+  <footer class="app-footer">
+    <p>Mon Budget · Application 100 % locale, sans serveur ni pistage publicitaire.</p>
+    <nav class="app-footer__links" aria-label="Informations légales et accès rapides">
+      <a href="#/epargne">Épargne</a>
+      <a href="#/investir">Patrimoine &amp; PEA</a>
+      <a href="#/sauvegarde">Sauvegarde chiffrée</a>
+      <a href="#/cgv">Conditions générales (CGV / CGU)</a>
+    </nav>
+  </footer>
 
   <template id="review-row-template">
     <tr class="review-row">

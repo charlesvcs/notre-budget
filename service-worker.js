@@ -5,7 +5,7 @@
  *
  * Pour publier une nouvelle version : incrémenter CACHE_VERSION.
  */
-const CACHE_VERSION = 'v48';
+const CACHE_VERSION = 'v50';
 const CACHE_NAME = `mon-budget-${CACHE_VERSION}`;
 
 const APP_SHELL = [

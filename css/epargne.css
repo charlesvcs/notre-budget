@@ -1,6 +1,5 @@
-/* ——— Écran « Épargne » : livrets réglementés ———
-   Même grammaire que « Le mois » : des longueurs plutôt que des tuiles.
-   Indigo pour les livrets et les données, rayé fin pour le projeté. */
+/* Ecrans Epargne et Investissement :
+   Vision globale du patrimoine aujourd'hui et projections lisibles sans maintien du clic. */
 
 .savings {
   max-width: 1120px;
@@ -31,7 +30,32 @@
 
 .savings .ops__notice { margin: 0; }
 
-/* Actions de formulaire : lien à gauche, boutons à droite */
+/* Synthese Patrimoine Global (Epargne + PEA + Projections) */
+.patrimoine-card {
+  display: grid;
+  gap: 16px;
+  border-left: 4px solid var(--accent-strong);
+}
+
+.patrimoine-bar {
+  display: flex;
+  height: 18px;
+  border-radius: var(--r-mark);
+  background: var(--surface-2);
+  overflow: hidden;
+  gap: 2px;
+}
+
+.patrimoine-bar__seg {
+  height: 100%;
+  width: var(--w, 0%);
+  transition: width 0.18s ease-out;
+}
+
+.patrimoine-bar__seg--livrets { background: var(--saved); }
+.patrimoine-bar__seg--pea { background: var(--accent-strong); }
+
+/* Actions de formulaire */
 .sv-actions {
   display: flex;
   flex-wrap: wrap;
@@ -44,11 +68,12 @@
 .sv-danger-link { color: var(--danger); text-decoration-color: var(--danger-soft); }
 
 .savings input[type="text"],
+.savings input[type="number"],
 .savings input[type="date"],
 .savings input[type="month"],
 .savings select { width: 100%; }
 
-/* ——— Premier lancement ——— */
+/* Premier lancement */
 
 .sv-setup__form { display: grid; gap: 14px; }
 .sv-setup__rows { display: grid; gap: 10px; }
@@ -61,18 +86,17 @@
   margin: 0;
   padding: 12px 14px;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: var(--r-control);
   background: var(--surface-2);
 }
 
 .sv-setup__row:only-child .js-remove { visibility: hidden; }
 .sv-setup__row .icon-btn { margin-bottom: 2px; }
 
-/* ——— Vue d'ensemble ——— */
+/* Vue d'ensemble */
 
 .sv-hero { display: grid; gap: 16px; }
 
-/* Vos livrets face à l'inflation : un tableau à filets, le total entre liteaux */
 .sv-ledger__wrap { margin: 0 -4px; }
 
 .sv-ledger {
@@ -107,12 +131,11 @@
 .sv-ledger__tag { position: relative; display: block; height: 1.2em; }
 .sv-ledger .sv-rate__rail { display: block; }
 
-/* Le total est souligné d'un trait violet */
 .sv-ledger tfoot th,
 .sv-ledger tfoot td { border-top: 2px solid var(--accent-line); }
-.sv-ledger tfoot td.num { font-weight: 600; }
+.sv-ledger tfoot td.num { font-weight: 700; }
 
-/* Taux de chaque livret, sur une même échelle, et le repère de l'inflation */
+/* Taux de chaque livret et repere de l'inflation */
 .sv-rates { display: grid; gap: 10px; }
 
 .sv-rates__head,
@@ -142,7 +165,7 @@
 .sv-rate__rail {
   position: relative;
   height: 14px;
-  border-radius: var(--r-control);
+  border-radius: var(--r-mark);
   background: var(--surface-2);
 }
 
@@ -150,9 +173,9 @@
   display: block;
   width: var(--w, 0%);
   height: 100%;
-  border-radius: var(--r-control);
+  border-radius: var(--r-mark);
   background: var(--c, var(--accent-strong));
-  transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.18s ease-out;
 }
 
 .sv-rate__mark {
@@ -176,7 +199,7 @@
 
 .sv-rate__value strong { font-size: 0.95rem; }
 
-/* Rendement réel : chevron + signe, la couleur ne fait que souligner */
+/* Rendement reel */
 .sv-real {
   display: inline-flex;
   align-items: center;
@@ -187,15 +210,14 @@
   white-space: nowrap;
 }
 
-/* Rendement et gain réels : chevron + signe ; perte en rouge, gain en vert */
 .sv-real[data-sign="neg"] { color: var(--danger); }
 .sv-real[data-sign="pos"] { color: var(--positive); }
 .sv-real[data-sign="zero"] { color: var(--text-muted); }
 
-.sv-verdict { margin: 0; max-width: 70ch; font-size: 1rem; }
-.sv-hero .card__hint { margin-top: -8px; max-width: 70ch; }
+.sv-verdict { margin: 0; max-width: 72ch; font-size: 1rem; }
+.sv-hero .card__hint { margin-top: -8px; max-width: 72ch; }
 
-/* ——— Cartes des livrets ——— */
+/* Cartes des livrets */
 
 .sv-grid {
   display: grid;
@@ -224,17 +246,16 @@
 }
 
 .sv-livret__rate strong {
-  padding: 3px 12px;
-  border-radius: 999px;
+  padding: 4px 10px;
+  border-radius: 6px;
   background: var(--c, var(--accent-strong));
   color: #FFFFFF;
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 900;
 }
-@media (prefers-color-scheme: dark) { .sv-livret__rate strong { color: #120E22; } }
-.sv-livret__rate small { margin-top: 4px; }
-.sv-livret__rate small { color: var(--text-muted); font-size: 0.8rem; }
+@media (prefers-color-scheme: dark) { .sv-livret__rate strong { color: #0E141D; } }
+.sv-livret__rate small { margin-top: 4px; color: var(--text-muted); font-size: 0.8rem; }
 
 .sv-livret__balance {
   display: flex;
@@ -250,7 +271,6 @@
 .sv-cap { display: grid; gap: 6px; }
 .sv-cap .meter__fill { background: var(--c, var(--accent-strong)); }
 
-/* Les chiffres du livret en lignes à filets : libellé à gauche, valeur à droite, note dessous */
 .sv-stats { display: grid; margin: 0; }
 
 .sv-stats > div {
@@ -271,7 +291,7 @@
 .sv-warning {
   margin: 0;
   padding: 10px 14px;
-  border-radius: 16px;
+  border-radius: var(--r-control);
   background: var(--warning-soft);
   color: var(--warning-ink);
   font-size: 0.9rem;
@@ -279,9 +299,9 @@
 }
 
 .sv-livret__moves { margin: 0; }
-.sv-livret__moves summary { font-size: 0.92rem; }
+.sv-livret__moves summary { font-size: 0.92rem; cursor: pointer; font-weight: 600; }
 
-/* Mouvements d'un livret, virements à rattacher */
+/* Mouvements d'un livret */
 .sv-moves { display: grid; margin: 8px 0 0; padding: 0; list-style: none; }
 .sv-moves__intro { padding: 0 0 8px; color: var(--text-muted); font-size: 0.84rem; }
 
@@ -297,7 +317,6 @@
 .sv-move__date { color: var(--text-muted); font-size: 0.86rem; font-variant-numeric: tabular-nums; }
 .sv-move__label { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 .sv-move__label small { display: block; color: var(--text-muted); font-size: 0.8rem; font-weight: 500; }
-.sv-move__label .badge { margin-top: 0; }
 .sv-move__amount { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 .sv-move__amount[data-sign="in"] { color: var(--positive); }
 .sv-move__action { font-size: 0.84rem; white-space: nowrap; }
@@ -323,16 +342,42 @@
 
 .sv-edit__wide { grid-column: 1 / -1; }
 
-/* ——— PEA ——— */
+/* PEA et Simulateur de projection */
 
 .sv-pea-list { display: grid; gap: 20px; }
 .sv-pea .sv-stats { grid-template-columns: repeat(auto-fit, minmax(16em, 1fr)); column-gap: 24px; }
-.sv-pea__sim { display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid var(--border); }
+.sv-pea__sim { display: grid; gap: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 .sv-pea__controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; }
 .sv-pea__monthly { width: 12em; }
-.sv-pea__results { display: grid; gap: 14px; }
+.sv-pea__results { display: grid; gap: 16px; }
 .sv-pea__results > .card__hint { margin: 0; max-width: 75ch; }
 .sv-pea__results .sv-legend { margin-top: 0; }
+
+.sv-quick-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.sv-quick-btn {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+
+.sv-quick-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-strong);
+}
 
 .sv-pea__form { display: grid; gap: 14px; }
 .sv-pea__form .card__head { margin: 0; }
@@ -347,7 +392,7 @@
   margin: 0;
   padding: 12px 14px;
   border: 0;
-  border-radius: var(--radius);
+  border-radius: var(--r-control);
   background: var(--surface-2);
 }
 
@@ -356,7 +401,7 @@
 .sv-pea__other { grid-column: span 2; }
 .sv-pea__other[hidden] { display: none; }
 
-/* ——— Investir ——— */
+/* Investir */
 
 .invest__title { margin: 12px 0 -4px; font-size: 1.3rem; }
 .invest__market { display: grid; gap: 10px; }
@@ -364,26 +409,203 @@
 .inv-goal { display: grid; gap: 16px; }
 .inv-goal .sv-table tbody th .sv-verdict-tag { font-size: 0.78rem; }
 .inv-goal .sv-table tr.is-suggested > * { background: var(--surface-2); }
-.inv-goal .sv-table tr.is-suggested > th { border-radius: 10px 0 0 10px; padding-left: 8px; }
-.inv-goal .sv-table tr.is-suggested > td:last-child { border-radius: 0 10px 10px 0; padding-right: 8px; }
+.inv-goal .sv-table tr.is-suggested > th { border-radius: 6px 0 0 6px; padding-left: 8px; }
+.inv-goal .sv-table tr.is-suggested > td:last-child { border-radius: 0 6px 6px 0; padding-right: 8px; }
 .inv-goal .sv-verdict { max-width: 80ch; }
 .inv-goal .card__hint { margin: 0; max-width: 80ch; }
 
-/* ——— Projection ———
-   Aujourd'hui en plein (bleu épargne), les fins d'année projetées en hachure,
-   et un trait pour ce que le solde vaudra en euros d'aujourd'hui. */
+/* Projection ergonomique et explicite :
+   - Lecture directe de la repartition Fonds investis vs Interets composes gagnes sans clic ni maintien.
+   - Barres empilees verticales avec etiquettes directes + Synthese horizontale par jalons + Tableau complet. */
+
+.sv-split-box {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.sv-split-box__title {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.sv-split-bar {
+  display: flex;
+  width: 100%;
+  height: 30px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.sv-split-bar__seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding-inline: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #FFFFFF;
+  transition: width 0.2s ease-out;
+}
+
+.sv-split-bar__seg--contrib {
+  background: var(--saved);
+}
+
+.sv-split-bar__seg--gain {
+  background: var(--positive);
+}
+
+.sv-split-bar__seg--loss {
+  background: var(--danger);
+}
+
+.sv-split-bar__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.sv-split-pills {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14em, 1fr));
+  gap: 10px;
+}
+
+.sv-split-pill {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.sv-split-pill--contrib {
+  border-left: 4px solid var(--saved);
+}
+
+.sv-split-pill--gain {
+  border-left: 4px solid var(--positive);
+}
+
+.sv-split-pill--loss {
+  border-left: 4px solid var(--danger);
+}
+
+.sv-split-pill--net {
+  border-left: 4px solid var(--accent-strong);
+}
+
+.sv-split-pill__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.sv-split-pill__val {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.sv-split-pill--gain .sv-split-pill__val {
+  color: var(--positive);
+}
+
+.sv-split-pill--loss .sv-split-pill__val {
+  color: var(--danger);
+}
+
+.sv-split-pill__note {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Repartition visuelle des ETF */
+.sv-etf-alloc {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--r-control);
+  background: var(--surface-2);
+}
+
+.sv-etf-alloc__title {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.sv-etf-bar {
+  display: flex;
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  gap: 2px;
+  background: var(--surface);
+}
+
+.sv-etf-bar__seg {
+  height: 100%;
+  transition: width 0.2s ease-out;
+}
+
+.sv-etf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sv-etf-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sv-etf-legend__item small {
+  color: var(--text-muted);
+}
+
+/* Graphique de projection vertical avec lecture directe sous chaque barre */
+.sv-chart__scroll {
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
 
 .sv-chart,
 .sv-chart__labels {
   display: grid;
-  grid-template-columns: repeat(var(--cols, 6), minmax(0, 1fr));
-  gap: clamp(4px, 1.2vw, 10px);
+  grid-template-columns: repeat(var(--cols, 6), minmax(80px, 1fr));
+  gap: clamp(6px, 1vw, 10px);
+  min-width: calc(var(--cols, 6) * 84px);
 }
 
 .sv-chart {
   align-items: end;
-  height: 210px;
-  padding-top: 24px;
+  height: 250px;
+  padding-top: 32px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -396,76 +618,292 @@
   height: 100%;
   padding: 0;
   border: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: 6px 6px 0 0;
   background: none;
   font: inherit;
-  cursor: default;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
 }
 
 .sv-col:hover,
-.sv-col:focus-visible { background: var(--surface-2); }
-
-.sv-col__bar {
-  width: min(44px, 76%);
-  height: var(--h, 0%);
-  border-radius: 4px 4px 0 0;
-  background:
-    repeating-linear-gradient(135deg, var(--pink) 0 3px, transparent 3px 7px),
-    var(--pink-soft);
-  transition: height 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+.sv-col:focus-visible {
+  background: var(--surface-2);
 }
 
-.sv-col.is-today .sv-col__bar { background: var(--accent-strong); }
+.sv-col.is-selected {
+  background: var(--accent-soft);
+  box-shadow: inset 0 -3px 0 var(--accent-strong);
+}
+
+.sv-col__bar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: min(64px, 86%);
+  height: var(--h, 0%);
+  border-radius: 5px 5px 0 0;
+  overflow: hidden;
+  background: var(--saved);
+  transition: height 0.18s ease-out;
+}
+
+.sv-col__bar-gain {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: var(--gain-h, 0%);
+  background: var(--positive);
+  overflow: hidden;
+}
+
+.sv-col__bar-contrib {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  flex: 1;
+  background: var(--saved);
+  overflow: hidden;
+}
+
+.sv-col.is-today .sv-col__bar-contrib {
+  background: var(--accent-strong);
+}
+
+.sv-col__seg-label {
+  padding: 1px 3px;
+  color: #FFFFFF;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
+  pointer-events: none;
+}
+
+.sv-col.is-selected .sv-col__bar {
+  box-shadow: inset 0 0 0 2px var(--text);
+}
 
 .sv-col__real {
   position: absolute;
   bottom: var(--r, 0%);
-  width: min(54px, 92%);
+  width: min(68px, 92%);
   height: 0;
   border-top: 2.5px solid var(--text);
-  transition: bottom 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: bottom 0.18s ease-out;
   pointer-events: none;
 }
 
 .sv-col__value {
   position: absolute;
   bottom: calc(var(--h, 0%) + 4px);
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   color: var(--text);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  pointer-events: none;
 }
 
-.sv-col:not(.is-today):not(.is-last) .sv-col__value { display: none; }
-.sv-col:hover .sv-col__value,
-.sv-col:focus-visible .sv-col__value { display: block; }
-.sv-col.is-last .sv-col__value { right: 0; }
-.sv-col.is-today .sv-col__value { left: 0; }
+.sv-col.is-selected .sv-col__value {
+  z-index: 2;
+  background: var(--accent-strong);
+  color: #FFFFFF;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sv-col.is-selected .sv-col__value {
+    color: #0E141D;
+  }
+}
 
 .sv-chart__labels {
   margin-top: 6px;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
-.sv-chart__labels .is-today { color: var(--text); font-weight: 600; }
+.sv-col__meta {
+  display: grid;
+  gap: 2px;
+  padding: 4px 3px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.sv-col__meta.is-selected {
+  background: var(--accent-soft);
+}
+
+.sv-col__meta-year {
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sv-col__meta-gain {
+  color: var(--positive);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.sv-col__meta-contrib {
+  color: var(--saved);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.sv-col__meta-net {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.sv-chart__labels .is-today .sv-col__meta-year,
+.sv-chart__labels .is-selected .sv-col__meta-year {
+  color: var(--text);
+  font-weight: 800;
+}
+
+/* Barres horizontales empilees par jalons cles (lecture directe sans clic) */
+.sv-milestone-box {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.sv-milestone-box__head {
+  display: grid;
+  gap: 2px;
+}
+
+.sv-milestone-box__title {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sv-milestone-list {
+  display: grid;
+  gap: 12px;
+}
+
+.sv-milestone-row {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.sv-milestone-row__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 14px;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sv-milestone-row__totals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.sv-milestone-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--positive-soft);
+  color: var(--positive);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.sv-milestone-row__bar {
+  height: 26px;
+}
+
+.sv-milestone-row__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 16px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sv-milestone-row__contrib {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+
+.sv-milestone-row__gain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--positive);
+}
+
+.sv-milestone-row__real {
+  color: var(--text-muted);
+}
+
+/* Encadre de detail permanent de l'annee selectionnee */
+.sv-readout-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 12px 16px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sv-readout-box strong {
+  font-weight: 800;
+}
 
 .sv-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 18px;
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: var(--text-muted);
   font-size: 0.84rem;
 }
 
 .sv-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .key--real { height: 0; border-top: 2.5px solid var(--text); border-radius: 0; }
+.key--gain { background: var(--positive); }
+.key--contrib { background: var(--saved); }
 
-/* ——— Taux et inflation ——— */
+/* Taux et inflation */
 
 #sv-params-card { display: grid; gap: 16px; }
 #sv-params-card .card__head { margin: 0; }
@@ -510,13 +948,13 @@
 .sv-rate-add { margin: 0; }
 .sv-rate-add .sv-inline-form { margin-top: 10px; }
 
-/* ——— Sur 12 mois, en comptant l'inflation (carte d'un livret) ——— */
+/* Sur 12 mois, en comptant l'inflation */
 
 .sv-calc {
   display: grid;
   gap: 6px;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: var(--r-control);
   background: var(--surface-2);
 }
 
@@ -538,7 +976,7 @@
 .sv-calc__rows .is-total .sv-real { font-size: 1rem; }
 .sv-calc__note { margin: 0; color: var(--text-muted); font-size: 0.8rem; }
 
-/* ——— Tableau de bord : widgets ——— */
+/* Tableau de bord : widgets */
 
 .sv-board { display: grid; gap: 16px; }
 
@@ -565,9 +1003,9 @@
 .sv-widget .card__head { margin-bottom: 14px; }
 .sv-widget__title { margin: 0; font-size: 1.25rem; letter-spacing: -0.01em; }
 .sv-widget__body { display: grid; gap: 14px; }
-.sv-widget__body > .card__hint { margin: 0; max-width: 70ch; }
+.sv-widget__body > .card__hint { margin: 0; max-width: 72ch; }
 
-/* Personnaliser : les cartes deviennent des étiquettes à ranger */
+/* Personnaliser */
 .sv-board.is-editing .sv-widget { box-shadow: inset 0 0 0 1.5px var(--border); background: var(--surface); }
 .sv-board.is-editing .sv-widget .card__head { margin-bottom: 8px; }
 .sv-widget__tools { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 0.88rem; }
@@ -605,14 +1043,13 @@
   background: var(--surface);
 }
 
-/* Lignes de taux dans les widgets : noms plus longs, avec une note */
 .sv-widget .sv-rates__head,
 .sv-widget .sv-rate { grid-template-columns: minmax(9em, 15em) minmax(0, 1fr) minmax(9em, auto); }
 .sv-widget .sv-rate__name { white-space: normal; overflow: visible; }
 .sv-rate__name small { display: block; color: var(--text-muted); font-size: 0.78rem; font-weight: 500; white-space: normal; }
 .sv-rate__fill[data-tone="neutral"] { background: var(--series-other); }
 
-/* Intérêts face à l'inflation : deux longueurs et leur différence */
+/* Interets face a l'inflation */
 .sv-flow { display: grid; gap: 6px; padding: 12px 0; border-top: 1px solid var(--border); }
 .sv-flow:first-child { padding-top: 0; border-top: 0; }
 .sv-flow__name { display: flex; align-items: baseline; gap: 10px; margin: 0; }
@@ -624,7 +1061,7 @@
 .sv-flow.is-total { border-top: 2px solid var(--accent-line); }
 .sv-flow.is-total .sv-flow__name strong { font-size: 1.05rem; }
 
-/* Bulletin : statut (icône + libellé), explication, valeur */
+/* Bulletin */
 .sv-bulletin__summary { margin: 0; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; }
 .sv-bulletin { display: grid; margin: 0; padding: 0; list-style: none; }
 
@@ -657,7 +1094,7 @@
 
 .sv-num { font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* Tableaux des widgets */
+/* Tableaux des widgets et projections */
 .sv-table__wrap { overflow-x: auto; }
 .sv-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 
@@ -675,7 +1112,10 @@
 .sv-table td.num { font-weight: 600; }
 .sv-table tbody th small { display: block; color: var(--text-muted); font-size: 0.8rem; max-width: 46ch; }
 .sv-table--compact th,
-.sv-table--compact td { padding-block: 6px; font-size: 0.9rem; }
+.sv-table--compact td { padding-block: 7px; font-size: 0.9rem; }
+.sv-table tbody tr.is-selected > * { background: var(--accent-soft); font-weight: 700; }
+.sv-table tbody tr[data-year-idx] { cursor: pointer; }
+.sv-table tbody tr[data-year-idx]:hover > * { background: var(--surface-2); }
 
 /* Temps pour doubler */
 .sv-doubling { display: grid; margin: 0; padding: 0; list-style: none; }
@@ -685,7 +1125,7 @@
 .sv-doubling__name { display: flex; align-items: baseline; gap: 10px; }
 .sv-doubling small { color: var(--text-muted); font-size: 0.82rem; }
 
-/* Depuis 2020 : une ligne par livret, une ligne pointillée pour les prix */
+/* Depuis 2020 */
 .sv-history { width: 100%; height: auto; overflow: visible; }
 .sv-history__base { stroke: var(--border); stroke-width: 1; }
 .sv-history__year { fill: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -699,14 +1139,14 @@
 .sv-history__label.is-livret-1 { fill: var(--series-2); }
 .sv-history__facts { display: grid; gap: 6px; margin: 0; padding-left: 1.2em; font-size: 0.92rem; }
 
-/* Épargne de précaution : zone conseillée sur le rail */
+/* Epargne de precaution */
 .sv-safety__value { margin: 0; }
 .sv-safety__value strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
 
 .sv-safety {
   position: relative;
   height: 14px;
-  border-radius: var(--r-control);
+  border-radius: var(--r-mark);
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -736,9 +1176,9 @@
   display: block;
   width: var(--w, 0%);
   height: 100%;
-  border-radius: var(--r-control);
+  border-radius: var(--r-mark);
   background: var(--c, var(--accent-strong));
-  transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.18s ease-out;
 }
 
 .sv-safety__ticks { position: relative; height: 1.2em; margin-top: -8px; }
@@ -753,7 +1193,7 @@
   white-space: nowrap;
 }
 
-/* Chiffres clés : libellé, valeur en grand, note */
+/* Chiffres cles */
 .sv-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(13em, 1fr));
@@ -766,7 +1206,7 @@
   align-content: start;
   gap: 4px;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: var(--r-control);
   background: var(--surface-2);
 }
 
@@ -776,23 +1216,21 @@
 .sv-kpi small .sv-real { font-size: 0.8rem; }
 .sv-kpi small .sv-verdict-tag { font-size: 0.82rem; }
 
-/* Matelas de sécurité : les repères côte à côte, empilés sur petit écran */
 .sv-stats--row { grid-template-columns: repeat(auto-fit, minmax(11em, 1fr)); column-gap: 20px; }
 .sv-stats--row > div { grid-template-columns: minmax(0, 1fr); grid-template-areas: "label" "value" "note"; }
 .sv-stats--row dd { font-size: 1.05rem; }
 .sv-safety__value .sv-verdict-tag { margin-left: 4px; }
 
 .sv-widget__sub { margin: 6px 0 -6px; font-size: 1rem; }
-/* Tableaux du PEA : sur petit écran, ils défilent plutôt que d'écraser la colonne des noms */
 .sv-table--pea { min-width: 34em; }
 .sv-table--pea tbody th { min-width: 9em; }
 
-/* Données publiques mises à jour automatiquement */
+/* Donnees publiques mises a jour automatiquement */
 .sv-live {
   display: grid;
   gap: 10px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--r-control);
   background: var(--surface-2);
 }
 
@@ -813,7 +1251,7 @@
 .sv-live__source { color: var(--accent-strong); font-size: 0.84rem; text-align: right; text-underline-offset: 3px; text-decoration-color: var(--accent-line); }
 .sv-live__error { grid-column: 1 / -1; color: var(--text-muted); font-size: 0.8rem; }
 
-/* ——— Petits écrans ——— */
+/* Petits ecrans */
 
 @media (max-width: 860px) {
   .sv-grid,
@@ -830,7 +1268,6 @@
 }
 
 @media (max-width: 760px) {
-  /* Le tableau devient une pile : nom et solde, la longueur, puis taux · réel · gain */
   .sv-ledger thead { display: none; }
   .sv-ledger tr {
     display: grid;
@@ -878,5 +1315,4 @@
 }
 
 .key--today { background: var(--accent-strong); }
-.sv-rate__rail, .sv-rate__fill, .sv-safety, .sv-safety__fill { border-radius: var(--r-mark); }
 .sv-livret__balance small::first-letter { text-transform: uppercase; }

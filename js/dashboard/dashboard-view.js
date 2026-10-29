@@ -18,6 +18,8 @@ import {
 import { renderDonut } from './donut.js';
 import { matchFlows } from '../epargne/livret-model.js';
 import { PRODUCTS } from '../epargne/livret-rates.js';
+import { buildFullWorkbook } from '../epargne/export.js';
+import { download } from '../backup/backup-core.js';
 
 const euro0 = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 const euro2 = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -50,6 +52,7 @@ export function mountDashboard(root = document) {
     next: $('dash-next'),
     today: $('dash-today'),
     profiles: $('dash-view'),
+    exportBtn: $('dash-export'),
     hero: root.querySelector('.hero'),
     heroValue: $('hero-value'),
     heroNote: $('hero-note'),
@@ -158,7 +161,7 @@ export function mountDashboard(root = document) {
   const categoryOf = (id) => state.categories.find((c) => c.id === id);
   const isSolo = () => state.activeProfiles.length <= 1;
 
-  // ——— Chargement ——————————————————————————————————————————————
+  /* Chargement */
 
   async function load({ animate = true } = {}) {
     const loadId = ++state.loadId;
@@ -232,7 +235,7 @@ export function mountDashboard(root = document) {
     renderOperations(m);
   }
 
-  // ——— Sélecteur de vue ————————————————————————————————————————
+  /* Sélecteur de vue */
 
   function renderProfiles() {
     const options = [
@@ -283,7 +286,7 @@ export function mountDashboard(root = document) {
     if (radio) radio.checked = true;
   }
 
-  // ——— Noms des profils : double-clic sur un nom du sélecteur ————————
+  /* Noms des profils : double-clic sur un nom du sélecteur */
 
   function startRename(label) {
     const profile = label.querySelector('input').value;
@@ -366,7 +369,7 @@ export function mountDashboard(root = document) {
 
   const profileName = (p) => (p === ALL_PROFILES ? 'l\'ensemble des comptes' : state.profileNames[p] ?? p);
 
-  // ——— La barre du mois ————————————————————————————————————————
+  /* La barre du mois */
 
   function renderHero(m, animate) {
     const empty = m.isEmpty && !m.upcoming.length;
@@ -452,7 +455,7 @@ export function mountDashboard(root = document) {
     return parts.join(' · ');
   }
 
-  // ——— Catégories & enveloppes —————————————————————————————————
+  /* Catégories et enveloppes */
 
   function renderCategories(m, animate) {
     const scope = isSolo() ? '' : state.profile === ALL_PROFILES ? ' (total)' : ` (${profileName(state.profile)})`;
@@ -713,7 +716,7 @@ export function mountDashboard(root = document) {
     filterCategories(state.selected === id ? null : [id]);
   });
 
-  // ——— Évolution sur 6 mois ————————————————————————————————————
+  /* Évolution sur 6 mois */
 
   function renderTrend(m, animate) {
     const selected = state.selected ? m.categories.find((r) => r.category.id === state.selected) : null;
@@ -738,14 +741,17 @@ export function mountDashboard(root = document) {
 
     const max = Math.max(1, limit ?? 0, ...values.map((v) => v.value)) * 1.12;
     const current = values.length - 1;
+    const activeIdx = state.trendIdx ?? current;
     const maxIndex = values.reduce((best, v, i) => (v.imported && v.value > values[best].value ? i : best), 0);
     const heights = [];
     const cols = values.map((v, i) => {
       const col = document.createElement('button');
       col.type = 'button';
       col.className = 'trend__col';
+      col.dataset.idx = String(i);
       col.setAttribute('role', 'listitem');
       col.classList.toggle('is-current', i === current);
+      col.classList.toggle('is-selected', i === activeIdx);
       col.classList.toggle('is-max', i === maxIndex && i !== current && v.value > 0);
       const label = `${formatMonth(v.month)} : ${v.imported ? money(v.value) : 'relevé non importé'}`;
       col.setAttribute('aria-label', label);
@@ -788,7 +794,7 @@ export function mountDashboard(root = document) {
     }));
     if (el.trend.nextElementSibling?.classList.contains('trend__labels')) el.trend.nextElementSibling.remove();
     el.trend.after(labels);
-    el.trendReadout.textContent = '';
+    el.trendReadout.textContent = cols[activeIdx]?.dataset.readout ?? '';
 
     if (animate) {
       for (const [col] of heights) col.style.setProperty('--h', '0%');
@@ -800,16 +806,18 @@ export function mountDashboard(root = document) {
     }
   }
 
-  const showReadout = (e) => {
+  const selectTrendCol = (e) => {
     const col = e.target.closest('.trend__col');
-    el.trendReadout.textContent = col ? col.dataset.readout : '';
+    if (!col) return;
+    state.trendIdx = Number(col.dataset.idx);
+    el.trend.querySelectorAll('.trend__col').forEach((n) => n.classList.toggle('is-selected', n === col));
+    el.trendReadout.textContent = col.dataset.readout;
   };
-  el.trend.addEventListener('pointerover', showReadout);
-  el.trend.addEventListener('focusin', showReadout);
-  el.trend.addEventListener('pointerleave', () => { el.trendReadout.textContent = ''; });
+  el.trend.addEventListener('click', selectTrendCol);
+  el.trend.addEventListener('focusin', selectTrendCol);
   el.trendClear.addEventListener('click', () => filterCategories(null));
 
-  // ——— Répartition ——————————————————————————————————————————————
+  /* Répartition */
 
   function renderSplit(m) {
     el.split.hidden = !m.breakdown.length;
@@ -835,7 +843,7 @@ export function mountDashboard(root = document) {
     });
   }
 
-  // ——— Principaux commerçants ——————————————————————————————————
+  /* Principaux commerçants */
 
   function renderMerchants(m, animate) {
     el.merchantsEmpty.hidden = m.merchants.length > 0;
@@ -860,7 +868,7 @@ export function mountDashboard(root = document) {
     setWidths(widths, animate);
   }
 
-  // ——— Échéances mensualisées ——————————————————————————————————
+  /* Échéances mensualisées */
 
   function renderDue(m) {
     el.dueUpcomingGroup.hidden = !m.upcoming.length;
@@ -898,7 +906,7 @@ export function mountDashboard(root = document) {
     nameEl.textContent = name;
     nameEl.title = kind === 'passee'
       ? `Mensualisée le ${dayMonth.format(asDate(u.lastSeen))}, retrouvée ce mois-ci : ${u.matched.label}`
-      : `${u.label} — dernière fois le ${dayMonth.format(asDate(u.lastSeen))}`;
+      : `${u.label} (dernière fois le ${dayMonth.format(asDate(u.lastSeen))})`;
     li.querySelector('.due__amount').textContent = `${u.type === 'entree' ? '+' : '−'}${moneyExact(shown.amount)}`;
     const actions = li.querySelector('.due__actions');
     if (kind === 'a-venir' || kind === 'non-retrouvee') {
@@ -937,7 +945,7 @@ export function mountDashboard(root = document) {
     await load({ animate: false });
   });
 
-  // ——— Opérations : filtres ————————————————————————————————————
+  /* Opérations : filtres */
 
   const TYPE_FILTERS = {
     depenses: (t) => t.type === 'sortie' && !t.offBudget,
@@ -1045,7 +1053,7 @@ export function mountDashboard(root = document) {
     el.fQ.focus();
   });
 
-  // ——— Opérations : liste ——————————————————————————————————————
+  /* Opérations : liste */
 
   const opName = (t) => t.note?.trim() || displayLabel(t.label).name;
 
@@ -1088,7 +1096,7 @@ export function mountDashboard(root = document) {
     return node;
   }
 
-  // ——— Opérations : mode édition (validé d'un coup) ———————————————
+  /* Opérations : mode édition (validé d'un coup) */
 
   function editRow(t) {
     const node = el.opEditTemplate.content.firstElementChild.cloneNode(true);
@@ -1120,10 +1128,10 @@ export function mountDashboard(root = document) {
       new Option('Autre placement (pas un livret)', 'aucun'),
     );
     f('destination').value = 'destination' in draft ? draft.destination : (state.assign[t.id] ?? '');
-    f('destination').setAttribute('aria-label', `Vers quel livret — ${name}`);
+    f('destination').setAttribute('aria-label', `Vers quel livret (${name})`);
     toggleDestination(node, value('categoryId'));
     for (const el2 of node.querySelectorAll('input, select')) el2.setAttribute('aria-describedby', '');
-    node.querySelectorAll('.visually-hidden').forEach((s) => { s.textContent += ` — ${name}`; });
+    node.querySelectorAll('.visually-hidden').forEach((s) => { s.textContent += ` (${name})`; });
 
     const del = node.querySelector('.js-delete');
     const doomed = state.toDelete.has(t.id);
@@ -1305,7 +1313,7 @@ export function mountDashboard(root = document) {
     await load({ animate: false });
   });
 
-  // ——— Navigation ——————————————————————————————————————————————
+  /* Navigation */
 
   async function showLatestMonthHint() {
     const latest = await getLatestMonth();
@@ -1339,13 +1347,37 @@ export function mountDashboard(root = document) {
 
   window.addEventListener(DATA_CHANGED, () => load({ animate: false }));
 
+  if (el.exportBtn) {
+    el.exportBtn.addEventListener('click', async () => {
+      el.exportBtn.disabled = true;
+      el.exportBtn.textContent = 'Préparation…';
+      try {
+        const today = todayIso();
+        const workbook = await buildFullWorkbook({
+          today,
+          month: state.month,
+          profile: state.profile,
+          names: state.profileNames,
+        });
+        download(new File([workbook.toBlob()], `notre-budget-bilan-complet-${today}.xlsx`, {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        }));
+      } catch (err) {
+        console.error('[export] Échec :', err);
+      } finally {
+        el.exportBtn.disabled = false;
+        el.exportBtn.textContent = 'Exporter le bilan Excel';
+      }
+    });
+  }
+
   return {
     /** À appeler quand l'écran redevient visible. */
     show: () => load(),
   };
 }
 
-// ——— Utilitaires ————————————————————————————————————————————————
+/* Utilitaires */
 
 function todayIso() {
   const d = new Date();

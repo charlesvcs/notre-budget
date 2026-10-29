@@ -3,8 +3,8 @@
  *
  * Priorité :
  *  1. Règles apprises (corrections faites par vous lors des imports précédents)
- *  2. Dictionnaire de mots-clés (enseignes françaises courantes) — le mot-clé
- *     le plus long gagne : « UBER EATS » (Sorties) l'emporte sur « UBER » (Transports)
+ *  2. Dictionnaire de mots-clés (enseignes françaises courantes) : le mot-clé
+ *     le plus long gagne, « UBER EATS » (Sorties) l'emporte sur « UBER » (Transports)
  *  3. Par défaut : Revenus pour une entrée, Autre pour une sortie
  */
 
@@ -76,6 +76,35 @@ const KEYWORDS = {
   ],
   // Virements vers le compte commun
   commun: ['COMMUN', 'COMPTE COMMUN'],
+  linges: [
+    'LINGE', 'LINGES', 'PRESSING', 'LAVERIE', 'BLANCHISSERIE', '5 A SEC', 'LINVOSGES',
+    'CARRE BLANC', 'BOUCHARA', 'COMPAGNIE DU BLANC', 'BLANC CERISE',
+  ],
+  beaute: [
+    'BEAUTE', 'SEPHORA', 'NOCIBE', 'MARIONNAUD', 'YVES ROCHER', 'KIKO', 'ADOPT', 'L OCCITANE',
+    'OCCITANE', 'RITUALS', 'NYX', 'ESTHETICIENNE', 'INSTITUT DE BEAUTE', 'PARFUMERIE',
+    'MANUCURE', 'ONGLERIE', 'AROMA ZONE', 'AROMAZONE', 'THE BODY SHOP', 'AESOP', 'OH MY CREAM',
+  ],
+  virements: [
+    'VIREMENT', 'VIREMENTS', 'VIREMENT SEPA', 'VIREMENT INSTANTANE', 'VIR SEPA', 'VIR INST',
+    'WERO', 'PAYLIB', 'LYDIA', 'SUMERIA', 'PAYPAL', 'REVOLUT',
+  ],
+  dejeuners: [
+    'DEJEUNER', 'DEJEUNERS', 'SWILE', 'EDENRED', 'TICKET RESTAURANT', 'BIMPLI', 'SODEXO', 'PLUXEE',
+    'UP DEJEUNER', 'CANTINE', 'SELF', 'PAUL', 'BRIOCHE DOREE', 'PRET A MANGER', 'COJEAN', 'EXKI',
+    'CLASS CROUTE', 'POMME DE PAIN', 'LA MIE CALINE', 'SUBWAY', 'POKAWA', 'BOULANGERIE ANGE',
+    'MARIE BLACHERE', 'FEUILLETTE',
+  ],
+  sport: [
+    'SPORT', 'DECATHLON', 'INTERSPORT', 'GO SPORT', 'SPORT 2000', 'COURIR', 'NIKE', 'ADIDAS',
+    'ASICS', 'SALOMON', 'PISCINE', 'TENNIS', 'PADEL', 'ESCALADE', 'ARKOSE', 'CLIMB UP',
+    'RUNNING', 'FITNESS', 'YOGA', 'CROSSFIT',
+  ],
+  loisirs: [
+    'LOISIR', 'LOISIRS', 'FNAC', 'CULTURA', 'DECITRE', 'GIBERT', 'MICROMANIA', 'STEAM', 'LEGO',
+    'JOUECLUB', 'KING JOUET', 'NATURE ET DECOUVERTES', 'DISNEYLAND', 'PARC ASTERIX', 'PUY DU FOU',
+    'FUTUROSCOPE', 'ZOO', 'AQUARIUM', 'ESCAPE GAME', 'LASER GAME', 'KARTING', 'BILLARD',
+  ],
   // Opérations sans commerçant identifiable
   autre: ['CHEQUE', 'CHQ', 'RETRAIT', 'RETRAIT DAB', 'DAB', 'RETRAIT ESPECES'],
   epargne: [

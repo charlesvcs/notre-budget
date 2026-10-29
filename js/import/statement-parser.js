@@ -51,7 +51,7 @@ const CREDIT_HINT =
 const DEBIT_HINT =
   /\b(CB|CARTE|PRLV|PRELEVEMENT|RETRAIT|PAIEMENT|ACHAT|FRAIS|COTIS|COMMISSION|VIR(EMENT)?\s+(SEPA\s+)?(EMIS|VERS|A\b|POUR))/i;
 
-// ——— Dates ————————————————————————————————————————————————————————
+/* Dates */
 
 function matchLeadingDate(text) {
   let m = NUMERIC_DATE.exec(text);
@@ -117,7 +117,7 @@ function findReferenceDate(lines, today) {
   return periodEnd ?? latest ?? today;
 }
 
-// ——— Montants et colonnes ——————————————————————————————————————————
+/* Montants et colonnes */
 
 /** Espace qui est en réalité un écart entre deux colonnes (et non un séparateur de milliers). */
 const isColumnGap = (line, i) => line.text[i] === ' ' && line.xe[i] - line.xs[i] > line.size * 0.6;
@@ -215,7 +215,7 @@ const cleanLabel = (s) => s.replace(/\s+/g, ' ').trim().replace(TRAILING_DATE, '
 
 const firstCharIndex = (text) => text.search(/\S/);
 
-// ——— Parseur principal ———————————————————————————————————————————
+/* Parseur principal */
 
 /**
  * @param {Array} lines  sortie de pdf-layout.js

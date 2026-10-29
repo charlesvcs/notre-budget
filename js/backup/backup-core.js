@@ -21,7 +21,7 @@ const DEBOUNCE_MS = 2500;
 export const BACKUP_STATUS = 'mon-budget:sauvegarde';
 const emitStatus = () => window.dispatchEvent(new CustomEvent(BACKUP_STATUS));
 
-// ——— Chiffrement ————————————————————————————————————————————————
+/* Chiffrement */
 
 function b64(bytes) {
   const view = new Uint8Array(bytes);
@@ -87,7 +87,7 @@ export async function openBackup(file, passphrase) {
 /** Remplace toute la base de cet appareil par le contenu d'une sauvegarde déchiffrée. */
 export const restoreBackup = (content) => importAll(content);
 
-// ——— Serveur local (Mac) —————————————————————————————————————————
+/* Serveur local (Mac) */
 
 let serverAvailable = null;
 
@@ -123,7 +123,7 @@ async function sendToServer(backup) {
   return res.json();
 }
 
-// ——— Sauvegarde automatique ———————————————————————————————————————
+/* Sauvegarde automatique */
 
 const state = { timer: null, running: false, again: false, lastError: null };
 
@@ -164,7 +164,7 @@ export async function startAutoBackup() {
   emitStatus();
 }
 
-// ——— Envoi (AirDrop) et téléchargement ———————————————————————————————
+/* Envoi (AirDrop) et téléchargement */
 
 export function backupAsFile(backup) {
   return new File([JSON.stringify(backup)], BACKUP_FILENAME, { type: 'application/json' });

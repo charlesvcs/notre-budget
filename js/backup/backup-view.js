@@ -42,7 +42,7 @@ export function mountBackupView(root = document) {
   };
   const pending = { file: null, content: null, passphrase: null };
 
-  // ——— État ——————————————————————————————————————————————————————
+  /* État */
 
   async function render() {
     const keySet = await hasPassphrase();
@@ -96,7 +96,7 @@ export function mountBackupView(root = document) {
 
   window.addEventListener(BACKUP_STATUS, render);
 
-  // ——— Mot de passe ————————————————————————————————————————————————
+  /* Mot de passe */
 
   el.passChange.addEventListener('click', () => {
     el.passForm.dataset.changing = 'true';
@@ -145,7 +145,7 @@ export function mountBackupView(root = document) {
     }
   });
 
-  // ——— Envoi (AirDrop) ——————————————————————————————————————————————
+  /* Envoi (AirDrop) */
 
   el.share.addEventListener('click', async () => {
     const file = backupAsFile(await createBackup());
@@ -158,7 +158,7 @@ export function mountBackupView(root = document) {
 
   el.download.addEventListener('click', async () => download(backupAsFile(await createBackup())));
 
-  // ——— Restauration ——————————————————————————————————————————————————
+  /* Restauration */
 
   function resetRestore() {
     Object.assign(pending, { file: null, content: null, passphrase: null });

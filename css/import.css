@@ -1,9 +1,9 @@
-/* ——— Module d'import de relevés ——— */
+/* Module d'import de releves */
 
 .import {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 32px 0 56px;
+  padding: 24px 0 56px;
   display: grid;
   gap: 20px;
 }
@@ -21,19 +21,19 @@
   color: var(--text-muted);
 }
 
-/* ——— Zone de dépôt ——— */
+/* Zone de depot */
 .dropzone {
   position: relative;
   display: grid;
   justify-items: center;
   gap: 6px;
-  padding: 44px 24px 36px;
+  padding: 40px 24px 32px;
   text-align: center;
   border: 2px dashed var(--accent-line);
   border-radius: var(--radius);
   background: var(--accent-soft);
   cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
 }
 
 .dropzone:hover { border-color: var(--accent); }
@@ -44,12 +44,9 @@
 }
 
 .dropzone.is-dragging {
-  transform: scale(1.012);
   border-style: solid;
   border-color: var(--accent);
 }
-
-.dropzone.is-dragging .dropzone__icon { transform: translateY(-4px) rotate(-4deg); }
 
 .dropzone.is-busy {
   pointer-events: none;
@@ -59,14 +56,13 @@
 .dropzone__icon {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   margin-bottom: 8px;
-  border-radius: var(--radius);
+  border-radius: var(--r-control);
   background: var(--surface);
   color: var(--accent-strong);
   box-shadow: var(--shadow-sm);
-  transition: transform 0.25s ease;
 }
 
 .dropzone__title { font-size: 1.15rem; font-weight: 600; }
@@ -78,15 +74,15 @@
   align-items: center;
   gap: 6px;
   margin-top: 12px;
-  padding: 4px 12px;
-  border-radius: var(--r-control);
+  padding: 5px 12px;
+  border-radius: 6px;
   background: var(--surface);
   color: var(--positive);
   font-size: 0.82rem;
   font-weight: 600;
 }
 
-/* ——— Message d'état ——— */
+/* Message d'etat */
 .import__status {
   margin: 0;
   padding: 12px 16px;
@@ -98,7 +94,7 @@
 .import__status[data-tone="error"] { color: var(--danger); }
 .import__status[data-tone="success"] { color: var(--positive); font-weight: 600; }
 
-/* ——— Zone de validation ——— */
+/* Zone de validation */
 .review {
   display: grid;
   gap: 16px;
@@ -155,8 +151,8 @@
   background: var(--surface-2);
 }
 
-.review__table td:first-child { border-radius: 14px 0 0 14px; padding-left: 14px; }
-.review__table td:last-child { border-radius: 0 14px 14px 0; }
+.review__table td:first-child { border-radius: 8px 0 0 8px; padding-left: 14px; }
+.review__table td:last-child { border-radius: 0 8px 8px 0; }
 
 .review__table .num { text-align: right; }
 
@@ -187,8 +183,8 @@
 .badge {
   display: inline-block;
   margin-top: 4px;
-  padding: 2px 9px;
-  border-radius: var(--r-control);
+  padding: 2px 8px;
+  border-radius: 4px;
   font-size: 0.74rem;
   font-weight: 600;
   background: var(--text);
@@ -198,7 +194,7 @@
 .badge[data-kind="duplicate"] { background: var(--border); color: var(--text); }
 .badge[data-kind="learned"] { background: var(--accent-soft); color: var(--accent-strong); }
 
-/* Pied collant : totaux + actions toujours visibles sur un long relevé */
+/* Pied collant : totaux + actions toujours visibles sur un long releve */
 .review__footer {
   position: sticky;
   bottom: 0;
@@ -228,7 +224,7 @@
 
 .review__actions { display: flex; gap: 10px; margin-left: auto; }
 
-/* ——— Mobile : chaque opération devient une carte ——— */
+/* Mobile : chaque operation devient une carte */
 @media (max-width: 760px) {
   .import { padding-top: 20px; }
   .dropzone { padding: 32px 16px 28px; }

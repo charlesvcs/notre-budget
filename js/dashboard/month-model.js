@@ -36,7 +36,7 @@ export const TREND_MONTHS = 6;
 /** Nombre de commerçants listés. */
 export const TOP_MERCHANTS = 5;
 
-// ——— Mois « YYYY-MM » ————————————————————————————————————————————
+/* Mois « YYYY-MM » */
 
 export function addMonths(month, n) {
   const [y, m] = month.split('-').map(Number);
@@ -55,7 +55,7 @@ export const recurringKey = (t) => `${t.type}|${merchantKey(t.label) || t.label}
 /** Clé d'une échéance ignorée pour un mois donné (« Pas ce mois-ci »). */
 export const skipKey = (month, key) => `${month}|${key}`;
 
-// ——— Modèle ——————————————————————————————————————————————————————
+/* Modèle */
 
 /**
  * @param {object} p
@@ -298,7 +298,7 @@ function buildBreakdown(spentBy, total) {
   return head.map((r) => ({ ...r, share: total ? r.amount / total : 0 }));
 }
 
-// ——— Libellés lisibles ——————————————————————————————————————————
+/* Libellés lisibles */
 
 const OPERATION_KINDS = [
   [/^(CARTE|CB)\b(\s+X\d{4})?/, 'Carte'],
@@ -354,7 +354,7 @@ function titleCase(text) {
   }).join(' ');
 }
 
-// ——— Utilitaires ————————————————————————————————————————————————
+/* Utilitaires */
 
 const sum = (list) => list.reduce((s, t) => s + t.amount, 0);
 

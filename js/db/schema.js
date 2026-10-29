@@ -1,19 +1,19 @@
 /**
- * Schéma de la base locale « Mon Budget ».
+ * Schema de la base locale « Mon Budget ».
  *
  * Conventions :
- *  - Les montants sont stockés en CENTIMES (entiers) pour éviter les erreurs
- *    d'arrondi des flottants (0.1 + 0.2 !== 0.3). 12,50 € → 1250.
- *  - Les dates sont des chaînes ISO "YYYY-MM-DD" ; on stocke aussi "month"
- *    ("YYYY-MM") pour indexer et agréger rapidement par mois.
+ *  - Les montants sont stockes en CENTIMES (entiers) pour eviter les erreurs
+ *    d'arrondi des flottants (0.1 + 0.2 !== 0.3). 12,50 € -> 1250.
+ *  - Les dates sont des chaines ISO "YYYY-MM-DD" ; on stocke aussi "month"
+ *    ("YYYY-MM") pour indexer et agreger rapidement par mois.
  *  - Les identifiants sont des UUID (crypto.randomUUID) : stables lors d'un
- *    export/import entre appareils, contrairement aux auto-incréments.
+ *    export/import entre appareils, contrairement aux auto-increments.
  */
 
-// Identifiant interne stable de la base IndexedDB (conservé pour compatibilité des bases et sauvegardes).
+// Identifiant interne stable de la base IndexedDB (conserve pour compatibilite des bases et sauvegardes).
 export const DB_NAME = 'notre-budget';
 
-// Incrémenter à chaque changement de schéma et ajouter l'étape dans MIGRATIONS.
+// Incrementer a chaque changement de schema et ajouter l'etape dans MIGRATIONS.
 export const DB_VERSION = 5;
 
 export const STORES = Object.freeze({
@@ -43,12 +43,12 @@ export const PROFILES = Object.freeze({
  * Transaction {
  *   id: string            UUID
  *   date: string          "2026-10-20"
- *   month: string         "2026-10"         (dérivé de date, indexé)
- *   amount: number        centimes, toujours positif ; le sens est porté par `type`
+ *   month: string         "2026-10"         (derive de date, indexe)
+ *   amount: number        centimes, toujours positif ; le sens est porte par `type`
  *   type: 'entree' | 'sortie'
- *   categoryId: string    → Category.id
- *   label: string         libellé original (relevé bancaire)
- *   note: string          libellé personnalisé, optionnel
+ *   categoryId: string    -> Category.id
+ *   label: string         libelle original (releve bancaire)
+ *   note: string          libelle personnalise, optionnel
  *   recurring: boolean
  *   profile: 'moi' | 'compagne' | 'commun'
  *   createdAt: string     ISO datetime
@@ -59,22 +59,20 @@ export const PROFILES = Object.freeze({
  *   id: string            slug stable, ex. "courses"
  *   name: string
  *   kind: 'sortie' | 'entree' | 'epargne' | 'transfert'
- *                         épargne et transfert : mouvements entre vos comptes,
- *                         hors dépenses, budgets et reste à vivre
- *   icon: string          emoji
+ *   icon: string
  *   color: string         couleur hex
  *   group: 'base' | 'etendue' | 'perso'
  *   order: number
  *   archived: boolean
  * }
  *
- * Budget {               « enveloppe » mensuelle d'une catégorie
+ * Budget {               « enveloppe » mensuelle d'une categorie
  *   id: string            UUID
- *   categoryId: string    → Category.id
+ *   categoryId: string    -> Category.id
  *   profile: 'moi' | 'compagne' | 'commun' | 'tous'   ('tous' = enveloppe globale)
  *   monthlyLimit: number  centimes
- *   alertThreshold: number  0–1, ex. 0.8 = alerte à 80 %
- * }  — unique sur [categoryId, profile]
+ *   alertThreshold: number  0 a 1, ex. 0.8 = alerte a 80 %
+ * }  unique sur [categoryId, profile]
  *
  * Project {
  *   id: string            UUID
@@ -90,35 +88,31 @@ export const PROFILES = Object.freeze({
  *   updatedAt: string
  * }
  *
- * Setting { key: string, value: any }   — ex. noms affichés des profils
+ * Setting { key: string, value: any }   ex. noms affiches des profils
  *
- * Rule {                  catégorisation apprise lors des imports (v2)
- *   key: string           clé marchand normalisée, ex. "BOULANGERIE MARIE"
- *   categoryId: string    → Category.id
+ * Rule {                  categorisation apprise lors des imports (v2)
+ *   key: string           cle marchand normalisee, ex. "BOULANGERIE MARIE"
+ *   categoryId: string    -> Category.id
  *   recurring: boolean
- *   hits: number          nombre de fois où la règle a été confirmée
+ *   hits: number          nombre de fois ou la regle a ete confirmee
  *   updatedAt: string
  * }
  *
- * Livret {                livret réglementé suivi dans l'écran « Épargne » (v5)
+ * Livret {                livret reglemente suivi dans l'ecran « Epargne » (v5)
  *   id: string            UUID
  *   product: 'livretA' | 'lep'
  *   profile: 'moi' | 'compagne'   titulaire (un seul livret de chaque sorte par personne)
  *   anchor: { date: "YYYY-MM-DD", balance: number }   solde connu (centimes), saisi par vous
- *   monthlyPlan: number|null      versement mensuel prévu (centimes) ; null = d'après les relevés
- *   keywords: string[]    mots du libellé qui désignent ce livret dans les virements
+ *   monthlyPlan: number|null      versement mensuel prevu (centimes) ; null = d'apres les releves
+ *   keywords: string[]    mots du libelle qui designent ce livret dans les virements
  *   createdAt: string
  *   updatedAt: string
  * }
- *
- * Réglages liés : livretAssign { [transactionId]: livretId | 'aucun' } (rattachements
- * faits à la main), livretRates [{ from, livretA, lep }] (taux saisis),
- * inflation { rate, month }.
  */
 
 /**
- * Migrations successives. MIGRATIONS[n] fait passer la base de la version n-1 à n.
- * Ne jamais modifier une migration déjà livrée : en ajouter une nouvelle.
+ * Migrations successives. MIGRATIONS[n] fait passer la base de la version n-1 a n.
+ * Ne jamais modifier une migration deja livree : en ajouter une nouvelle.
  */
 export const MIGRATIONS = {
   1(db) {
@@ -129,7 +123,6 @@ export const MIGRATIONS = {
     tx.createIndex('profile', 'profile');
     tx.createIndex('type', 'type');
     tx.createIndex('recurring', 'recurring');
-    // Index composés pour les écrans de suivi mensuel
     tx.createIndex('month_category', ['month', 'categoryId']);
     tx.createIndex('month_profile', ['month', 'profile']);
 
@@ -153,7 +146,6 @@ export const MIGRATIONS = {
     rules.createIndex('categoryId', 'categoryId');
   },
 
-  // Virements vers le compte commun : transfert entre comptes
   3(db, tx) {
     const categories = tx.objectStore(STORES.CATEGORIES);
     const request = categories.get('commun');
@@ -162,7 +154,6 @@ export const MIGRATIONS = {
     };
   },
 
-  // Virements vers le compte commun comptés comme dépense commune
   4(db, tx) {
     const categories = tx.objectStore(STORES.CATEGORIES);
     const request = categories.get('commun');
@@ -173,7 +164,7 @@ export const MIGRATIONS = {
         ...c,
         kind: 'sortie',
         name: c.name === 'Commun' ? 'Courses communes' : c.name,
-        icon: c.icon === '🤝' ? '🛒' : c.icon,
+        icon: '',
       });
     };
   },
@@ -184,5 +175,5 @@ export const MIGRATIONS = {
   },
 };
 
-/** Catégories hors budget : ni dépense, ni revenu, ni reste à vivre. */
+/** Categories hors budget : ni depense, ni revenu, ni reste a vivre. */
 export const OFF_BUDGET_KINDS = Object.freeze(['epargne', 'transfert']);

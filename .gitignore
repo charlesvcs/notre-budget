@@ -5,5 +5,7 @@ sauvegardes/
 # Outillage et système
 .DS_Store
 .impeccable/
+.agents/
+skills-lock.json
 .vercel/
 node_modules/

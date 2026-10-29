@@ -40,7 +40,7 @@ export function mountImportView(root = document) {
   let categorizer = null;
   let busy = false;
 
-  // ——— Données de référence ——————————————————————————————————————
+  /* Données de référence */
 
   async function loadReferenceData() {
     categories = await getCategories();
@@ -73,7 +73,7 @@ export function mountImportView(root = document) {
   // Profils ou noms modifiés depuis le tableau de bord
   window.addEventListener(DATA_CHANGED, fillProfiles);
 
-  // ——— Dépôt de fichiers ——————————————————————————————————————————
+  /* Dépôt de fichiers */
 
   // Empêche le navigateur d'ouvrir le PDF si on le lâche à côté de la zone
   window.addEventListener('dragover', (e) => e.preventDefault());
@@ -168,7 +168,7 @@ export function mountImportView(root = document) {
     return `Impossible de lire « ${name} ».`;
   }
 
-  // ——— Lignes de la zone tampon ——————————————————————————————————
+  /* Lignes de la zone tampon */
 
   function toRow(t, source) {
     const s = categorizer.suggest(t.label, t.type);
@@ -214,13 +214,13 @@ export function mountImportView(root = document) {
     }
   }
 
-  // ——— Rendu ————————————————————————————————————————————————————
+  /* Rendu */
 
   function categoryOptions(type) {
     // Les catégories du bon sens d'abord ; les autres restent accessibles
     const fits = (c) => (type === TRANSACTION_TYPES.INCOME ? c.kind !== 'sortie' : c.kind !== 'entree');
     const sorted = [...categories.filter(fits), ...categories.filter((c) => !fits(c))];
-    return sorted.map((c) => new Option(`${c.icon}  ${c.name}`, c.id));
+    return sorted.map((c) => new Option(c.name, c.id));
   }
 
   function render() {
@@ -260,11 +260,9 @@ export function mountImportView(root = document) {
     tr.classList.toggle('needs-review', row.include && row.needsReview && !row.duplicate);
 
     const badge = tr.querySelector('.js-badge');
-    const untouched = !row.categoryTouched;
     const [kind, text] = row.duplicate ? ['duplicate', 'Déjà importée']
       : row.needsReview ? ['review', 'À vérifier']
-        : row.categorySource === 'appris' && untouched ? ['learned', 'Retenu de vos choix']
-          : [null, ''];
+        : [null, ''];
     badge.hidden = !kind;
     badge.dataset.kind = kind ?? '';
     badge.textContent = text;
@@ -303,7 +301,7 @@ export function mountImportView(root = document) {
       : selected.length ? `Valider et importer (${selected.length})` : 'Valider et importer';
   }
 
-  // ——— Modifications dans le tableau ——————————————————————————————
+  /* Modifications dans le tableau */
 
   const rowOf = (target) => {
     const tr = target.closest('tr[data-uid]');
@@ -384,7 +382,7 @@ export function mountImportView(root = document) {
     render();
   });
 
-  // ——— Validation finale ——————————————————————————————————————————
+  /* Validation finale */
 
   el.submit.addEventListener('click', async () => {
     const selected = rows.filter((r) => r.include);
@@ -439,7 +437,7 @@ export function mountImportView(root = document) {
     if (rows.length) e.preventDefault();
   });
 
-  // ——— Utilitaires d'affichage ————————————————————————————————————
+  /* Utilitaires d'affichage */
 
   function reset() {
     rows = [];

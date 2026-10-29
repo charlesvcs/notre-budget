@@ -29,8 +29,8 @@ Finance/
 │   ├── menu.css           Menu principal (bouton burger, panneau, animations)
 │   └── import.css         Zone de dépôt + tableau de validation
 ├── js/
-│   ├── app.js             Démarrage : service worker, base, navigation #/mois · #/epargne · #/investir · #/importer · #/sauvegarde
-│   ├── menu.js            Menu principal : bouton pilule + panneau de tuiles (ouverture animée, clavier, Échap)
+│   ├── app.js             Démarrage : service worker, base, navigation #/mois · #/epargne · #/investir · #/importer · #/sauvegarde · #/cgv
+│   ├── menu.js            Navigation directe et panneau menu (clavier, Échap)
 │   ├── backup/
 │   │   ├── backup-core.js     Chiffrement AES-GCM, sauvegarde automatique, partage
 │   │   └── backup-view.js     Onglet « Sauvegarde » (mot de passe, AirDrop, restauration)
@@ -98,7 +98,7 @@ Finance/
   compris dans l'écran d'import.
 - **Catégories & enveloppes** : pour chaque catégorie, le dépensé du mois,
   l'écart avec la moyenne des 3 derniers mois importés (à venir compris) et
-  l'enveloppe (vert < 75 %, orange 75–100 %, rouge au-delà). « Ajuster les
+  l'enveloppe (vert < 75 %, orange 75 à 100 %, rouge au-delà). « Ajuster les
   enveloppes » règle tout d'un coup ; « Compléter d'après mes derniers mois »
   remplit les enveloppes vides avec la moyenne arrondie à la dizaine.
   En vue « Tous », ce sont les enveloppes globales (profil `tous`) ; à défaut,
@@ -218,7 +218,7 @@ npx vercel --prod     # mise en ligne
   100 % d'actions mondiales dans un PEA) : valeur nette à l'échéance, écart,
   versement nécessaire, et perte possible si une chute comme 2008 (−40 %)
   survenait juste avant. Stratégie conseillée selon le temps restant (livrets
-  sous 3 ans, prudente 3–5, équilibrée 5–8, dynamique au-delà). Actions à 5 %
+  sous 3 ans, prudente 3 à 5, équilibrée 5 à 8, dynamique au-delà). Actions à 5 %
   par an ou au rendement des 10 dernières années, frais des ETF déduits ;
   livrets au taux du Livret A.
 - **Export Excel de l'onglet « Investir »** : indices, fiscalité du PEA, une

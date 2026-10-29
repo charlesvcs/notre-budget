@@ -1,6 +1,6 @@
 /**
- * Accès à la base IndexedDB locale — wrapper natif, sans dépendance.
- * Aucune donnée ne quitte le navigateur.
+ * Acces a la base IndexedDB locale : wrapper natif, sans dependance.
+ * Aucune donnee ne quitte le navigateur.
  */
 import {
   DB_NAME, DB_VERSION, STORES, MIGRATIONS, TRANSACTION_TYPES, PROFILES,
@@ -9,25 +9,25 @@ import { DEFAULT_CATEGORIES, DEFAULT_PROFILE_NAMES, DEFAULT_SETTINGS } from './s
 
 let dbPromise = null;
 
-/** Émis sur window quand des opérations, budgets… changent (import, édition). */
+/** Emis sur window quand des operations, budgets... changent (import, edition). */
 export const DATA_CHANGED = 'notre-budget:donnees';
 export const notifyDataChanged = () => window.dispatchEvent(new CustomEvent(DATA_CHANGED));
 
 /**
- * Émis après TOUTE écriture en base (sauf réglages propres à l'appareil) :
- * déclenche la sauvegarde automatique.
+ * Emis apres TOUTE ecriture en base (sauf reglages propres a l'appareil) :
+ * declenche la sauvegarde automatique.
  */
 export const DATA_WRITTEN = 'notre-budget:ecriture';
 const emitWrite = () => window.dispatchEvent(new CustomEvent(DATA_WRITTEN));
 
 /**
- * Réglages propres à cet appareil : jamais exportés ni écrasés par une
- * restauration (clé de chiffrement, état de la sauvegarde automatique).
+ * Reglages propres a cet appareil : jamais exportes ni ecrases par une
+ * restauration (cle de chiffrement, etat de la sauvegarde automatique).
  */
 export const LOCAL_ONLY_SETTINGS = new Set(['backupKey', 'backupLastAt']);
 const isLocalOnly = (storeName, key) => storeName === STORES.SETTINGS && LOCAL_ONLY_SETTINGS.has(key);
 
-// ——— Utilitaires ———————————————————————————————————————————————
+// Utilitaires
 
 /** Transforme une IDBRequest en Promise. */
 function req(request) {
@@ -37,7 +37,7 @@ function req(request) {
   });
 }
 
-/** Résout quand la transaction est validée (commit), rejette si elle échoue. */
+/** Resout quand la transaction est validee (commit), rejette si elle echoue. */
 function done(tx) {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
@@ -63,7 +63,7 @@ export function toCents(euros) {
 
 export const fromCents = (cents) => cents / 100;
 
-// ——— Ouverture & migrations ————————————————————————————————————
+// Ouverture et migrations
 
 export function openDB() {
   if (dbPromise) return dbPromise;
@@ -80,7 +80,7 @@ export function openDB() {
 
     request.onsuccess = () => {
       const db = request.result;
-      // Si un autre onglet ouvre une version plus récente, on libère la base.
+      // Si un autre onglet ouvre une version plus recente, on libere la base.
       db.onversionchange = () => {
         db.close();
         dbPromise = null;
@@ -97,16 +97,19 @@ export function openDB() {
 }
 
 /**
- * Insère les réglages par défaut si la base est vierge, et les catégories par
- * défaut qui manquent (y compris celles ajoutées après la création de la base).
- * Une catégorie existante n'est jamais modifiée.
+ * Insere les reglages par defaut si la base est vierge, et les categories par
+ * defaut qui manquent. Nettoie egalement les anciennes icones emojis stockees.
  */
 async function seedDefaults(db) {
   const tx = db.transaction([STORES.CATEGORIES, STORES.SETTINGS], 'readwrite');
   const categories = tx.objectStore(STORES.CATEGORIES);
   const settings = tx.objectStore(STORES.SETTINGS);
 
-  const existing = new Set(await req(categories.getAllKeys()));
+  const allCats = await req(categories.getAll());
+  const existing = new Set(allCats.map((c) => c.id));
+  for (const c of allCats) {
+    if (c.icon) categories.put({ ...c, icon: '' });
+  }
   DEFAULT_CATEGORIES.filter((c) => !existing.has(c.id)).forEach((c) => categories.put(c));
   if (existing.size === 0) {
     DEFAULT_SETTINGS.forEach((s) =>
@@ -116,8 +119,8 @@ async function seedDefaults(db) {
 }
 
 /**
- * Point d'entrée : ouvre la base, applique les migrations, insère les
- * données par défaut et demande un stockage persistant.
+ * Point d'entree : ouvre la base, applique les migrations, insere les
+ * donnees par defaut et demande un stockage persistant.
  */
 export async function initDatabase() {
   const db = await openDB();
@@ -130,7 +133,7 @@ export async function initDatabase() {
   return { db, persisted };
 }
 
-// ——— CRUD générique —————————————————————————————————————————————
+// CRUD generique
 
 async function store(name, mode = 'readonly') {
   const db = await openDB();
@@ -168,7 +171,7 @@ export async function remove(storeName, id) {
   if (!isLocalOnly(storeName, id)) emitWrite();
 }
 
-// ——— Validation ————————————————————————————————————————————————
+// Validation
 
 const PROFILE_VALUES = Object.values(PROFILES);
 const TYPE_VALUES = Object.values(TRANSACTION_TYPES);
@@ -181,7 +184,7 @@ function assertCents(value, field) {
   assert(Number.isInteger(value) && value >= 0, `${field} doit être un entier ≥ 0 (centimes)`);
 }
 
-// ——— Transactions ——————————————————————————————————————————————
+// Transactions
 
 function buildTransaction(input, existing = null) {
   assert(/^\d{4}-\d{2}-\d{2}$/.test(input.date), 'date attendue au format YYYY-MM-DD');
@@ -209,9 +212,9 @@ export async function saveTransaction(input) {
   return put(STORES.TRANSACTIONS, buildTransaction(input, existing));
 }
 
-/** Insère plusieurs nouvelles transactions en une seule transaction : tout ou rien. */
+/** Insere plusieurs nouvelles transactions en une seule transaction : tout ou rien. */
 export async function saveTransactions(inputs) {
-  const records = inputs.map((input) => buildTransaction(input)); // valide tout avant d'écrire
+  const records = inputs.map((input) => buildTransaction(input));
   const { tx, os } = await store(STORES.TRANSACTIONS, 'readwrite');
   records.forEach((r) => os.put(r));
   await done(tx);
@@ -230,35 +233,35 @@ export const getTransactionsByMonthAndProfile = (month, profile) =>
 
 export const deleteTransaction = (id) => remove(STORES.TRANSACTIONS, id);
 
-/** Dernier mois « YYYY-MM » contenant au moins une opération (ou null). */
+/** Dernier mois « YYYY-MM » contenant au moins une operation (ou null). */
 export async function getLatestMonth() {
   const { os } = await store(STORES.TRANSACTIONS);
   const cursor = await req(os.index('month').openKeyCursor(null, 'prev'));
   return cursor?.key ?? null;
 }
 
-/** Premier mois « YYYY-MM » contenant au moins une opération (ou null). */
+/** Premier mois « YYYY-MM » contenant au moins une operation (ou null). */
 export async function getEarliestMonth() {
   const { os } = await store(STORES.TRANSACTIONS);
   const cursor = await req(os.index('month').openKeyCursor());
   return cursor?.key ?? null;
 }
 
-// ——— Catégories ————————————————————————————————————————————————
+// Categories
 
 export async function getCategories({ includeArchived = false } = {}) {
-  const all = await getByIndex(STORES.CATEGORIES, 'order');
+  const all = (await getByIndex(STORES.CATEGORIES, 'order')).map((c) => ({ ...c, icon: '' }));
   return includeArchived ? all : all.filter((c) => !c.archived);
 }
 
-export const saveCategory = (category) => put(STORES.CATEGORIES, category);
+export const saveCategory = (category) => put(STORES.CATEGORIES, { ...category, icon: '' });
 
-// ——— Budgets ———————————————————————————————————————————————————
+// Budgets
 
 /** Une enveloppe vaut pour un profil, ou pour l'ensemble des comptes (« tous »). */
 export const HOUSEHOLD = 'tous';
 
-/** Crée ou met à jour l'enveloppe mensuelle d'une catégorie pour un profil ou l'ensemble (unique). */
+/** Cree ou met a jour l'enveloppe mensuelle d'une categorie pour un profil ou l'ensemble (unique). */
 export async function setBudget({ categoryId, profile = PROFILES.SHARED, monthlyLimit, alertThreshold = 0.8 }) {
   assertCents(monthlyLimit, 'monthlyLimit');
   assert(PROFILE_VALUES.includes(profile) || profile === HOUSEHOLD, `profil invalide : ${profile}`);
@@ -277,7 +280,7 @@ export const getBudgets = () => getAll(STORES.BUDGETS);
 
 export const deleteBudget = (id) => remove(STORES.BUDGETS, id);
 
-// ——— Projets / Épargne —————————————————————————————————————————
+// Projets / Epargne
 
 export async function saveProject(input) {
   assert(input.name?.trim(), 'name requis');
@@ -285,8 +288,8 @@ export async function saveProject(input) {
 
   const existing = input.id ? await getById(STORES.PROJECTS, input.id) : null;
   const record = {
-    icon: '🎯',
-    color: '#4F9D69',
+    icon: '',
+    color: '#0E8A43',
     currentAmount: 0,
     deadline: null,
     profile: PROFILES.SHARED,
@@ -304,7 +307,7 @@ export async function saveProject(input) {
   return put(STORES.PROJECTS, record);
 }
 
-/** Ajoute (ou retire, si négatif) un montant à un projet. */
+/** Ajoute (ou retire, si negatif) un montant a un projet. */
 export async function contributeToProject(id, deltaCents) {
   const project = await getById(STORES.PROJECTS, id);
   assert(project, `Projet introuvable : ${id}`);
@@ -313,7 +316,7 @@ export async function contributeToProject(id, deltaCents) {
 
 export const getProjects = () => getAll(STORES.PROJECTS);
 
-// ——— Livrets ———————————————————————————————————————————————————
+// Livrets
 
 export const LIVRET_PRODUCTS = ['livretA', 'lep'];
 
@@ -340,7 +343,7 @@ export const getLivrets = () => getAll(STORES.LIVRETS);
 
 export const deleteLivret = (id) => remove(STORES.LIVRETS, id);
 
-// ——— Réglages ——————————————————————————————————————————————————
+// Reglages
 
 export async function getSetting(key) {
    return (await getById(STORES.SETTINGS, key))?.value;
@@ -349,8 +352,8 @@ export async function getSetting(key) {
 export const setSetting = (key, value) => put(STORES.SETTINGS, { key, value });
 
 /**
- * Noms affichés des profils : normalise l'ancien libellé par défaut « Ma compagne »
- * en « Profil 2 » pour ne jamais imposer une dynamique de couple par défaut.
+ * Noms affiches des profils : normalise l'ancien libelle par defaut « Ma compagne »
+ * en « Profil 2 » pour ne jamais imposer une dynamique de couple par defaut.
  */
 export async function getProfileNames() {
   const saved = (await getSetting('profileNames')) ?? {};
@@ -362,10 +365,8 @@ export async function getProfileNames() {
 }
 
 /**
- * Profils activés dans l'interface : solo (« Moi ») par défaut, avec possibilité
+ * Profils actives dans l'interface : solo (« Moi ») par defaut, avec possibilite
  * d'activer un second profil (`compagne`) et/ou un compte commun (`commun`).
- * Si des opérations, enveloppes ou livrets existent déjà sur ces profils et qu'aucun
- * choix explicite n'a encore été enregistré, ils sont activés automatiquement.
  */
 export async function getActiveProfiles() {
   const saved = await getSetting('activeProfiles');
@@ -395,11 +396,11 @@ export async function setActiveProfiles(profiles) {
   return ordered;
 }
 
-// ——— Règles de catégorisation apprises ——————————————————————————
+// Regles de categorisation apprises
 
 export const getRules = () => getAll(STORES.RULES);
 
-/** Enregistre ou renforce des règles { key, categoryId, recurring }. */
+/** Enregistre ou renforce des regles { key, categoryId, recurring }. */
 export async function saveRules(rules) {
   if (!rules.length) return;
   const { tx, os } = await store(STORES.RULES, 'readwrite');
@@ -411,9 +412,9 @@ export async function saveRules(rules) {
   emitWrite();
 }
 
-// ——— Sauvegarde locale (export / import JSON) ——————————————————
+// Sauvegarde locale (export / import JSON)
 
-/** Exporte toute la base en un objet JSON-sérialisable (fichier à garder chez vous). */
+/** Exporte toute la base en un objet JSON-serialisable (fichier a garder chez vous). */
 export async function exportAll() {
   const data = {};
   for (const name of Object.values(STORES)) {
@@ -427,7 +428,6 @@ export async function importAll(backup) {
   assert((backup?.app === DB_NAME || backup?.app === 'mon-budget') && backup.data, 'Fichier de sauvegarde non reconnu');
   assert(backup.version <= DB_VERSION, 'Sauvegarde créée par une version plus récente de l\'app');
 
-  // Les réglages propres à cet appareil survivent à la restauration
   const keep = (await getAll(STORES.SETTINGS)).filter((r) => isLocalOnly(STORES.SETTINGS, r.key));
   const db = await openDB();
   const names = Object.values(STORES);

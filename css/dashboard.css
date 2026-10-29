@@ -1,4 +1,4 @@
-/* ——— Barre d'application ——— */
+/* Barre d'application */
 
 .app-bar {
   position: sticky;
@@ -26,9 +26,9 @@
   text-decoration: none;
 }
 
-.app-bar__brand img { border-radius: 9px; }
+.app-bar__brand img { border-radius: 6px; }
 
-/* ——— Mise en page du mois ——— */
+/* Mise en page du mois */
 
 .dash {
   max-width: 1120px;
@@ -65,18 +65,17 @@
 .month-nav h1::first-letter { text-transform: uppercase; }
 .month-nav .btn { margin-left: 8px; }
 
-/* Sélecteur de vue : boutons radio natifs habillés en segments */
+/* Selecteur de vue : boutons radio natifs habilles en segments francs (sans pilules) */
 .segmented {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   margin: 0;
   padding: 4px;
-  border: 0;
+  border: 1px solid var(--border);
   border-radius: var(--r-control);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
 }
 
 .segmented label {
@@ -95,13 +94,13 @@
 
 .segmented span {
   display: block;
-  padding: 6px 14px;
-  border-radius: 999px;
+  padding: 6px 13px;
+  border-radius: 6px;
   color: var(--text-muted);
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.1s ease, color 0.1s ease;
 }
 
 .segmented label:has(.seg-remove) span {
@@ -109,8 +108,14 @@
 }
 
 .segmented input[type="radio"]:checked + span {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: #FFFFFF;
+}
+
+@media (prefers-color-scheme: dark) {
+  .segmented input[type="radio"]:checked + span {
+    color: #0E141D;
+  }
 }
 
 .segmented input[type="radio"]:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 1px; }
@@ -123,15 +128,14 @@
   height: 18px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: 4px;
   background: transparent;
-  color: var(--text-muted);
+  color: currentColor;
   font: inherit;
   font-size: 0.85rem;
   line-height: 1;
   cursor: pointer;
-  opacity: 0.65;
-  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  opacity: 0.7;
 }
 
 .segmented .seg-remove:hover,
@@ -144,7 +148,7 @@
 .segmented .seg-add {
   padding: 5px 11px;
   border: 1px dashed var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-muted);
   font: inherit;
@@ -152,7 +156,7 @@
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.1s ease, color 0.1s ease, background-color 0.1s ease;
 }
 
 .segmented .seg-add:hover,
@@ -162,7 +166,7 @@
   color: var(--accent-strong);
 }
 
-/* Renommage d'un profil : le nom devient un champ, à la place du segment */
+/* Renommage d'un profil */
 .segmented .seg-input {
   position: relative;
   z-index: 2;
@@ -171,7 +175,7 @@
   padding: 7px 12px;
   line-height: inherit;
   border: 0;
-  border-radius: var(--r-control);
+  border-radius: 6px;
   background: var(--surface);
   box-shadow: inset 0 0 0 2px var(--accent);
   color: var(--text);
@@ -182,13 +186,14 @@
 
 .segmented .seg-input:focus-visible { outline: none; }
 
-/* ——— Cartes ——— */
+/* Cartes */
 
 .card {
   padding: 22px 24px 24px;
   border-radius: var(--radius);
+  border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 .card__head h2,
@@ -216,20 +221,19 @@
   color: var(--text-muted);
 }
 
-/* ——— La barre du mois ———
-   Longueur totale = revenus. Plein = dépensé, hachuré = à venir,
-   vert = libre : le reste à vivre est posé dans cette partie libre. */
+/* La barre du mois :
+   Longueur totale = revenus. Plein = depense, hachure = a venir,
+   blanc = libre : le reste a vivre est pose dans cette partie libre. */
 
 .hero {
   display: grid;
   gap: 14px;
   padding-top: 22px;
   background: var(--hero);
+  border-color: transparent;
   color: #FFFFFF;
-  box-shadow: 0 16px 40px rgb(108 71 255 / 0.32);
+  box-shadow: var(--shadow);
 }
-
-@media (prefers-color-scheme: dark) { .hero { box-shadow: 0 16px 40px rgb(0 0 0 / 0.45); } }
 
 .hero__head {
   display: flex;
@@ -249,30 +253,29 @@
 }
 
 .hero__note:empty { display: none; }
-.hero .hero__note { color: rgb(255 255 255 / 0.8); }
+.hero .hero__note { color: rgb(255 255 255 / 0.82); }
 
-/* La barre du mois, en pilule sur la carte violette */
+/* La barre du mois sur la carte principale */
 .monthbar {
   position: relative;
   display: flex;
   gap: 3px;
   height: clamp(76px, 60px + 3vw, 100px);
-  border-radius: 18px;
-  background: rgb(255 255 255 / 0.16);
+  border-radius: var(--r-control);
+  background: rgb(255 255 255 / 0.14);
   overflow: hidden;
 }
 
-/* Remplissage : la largeur part de 0 puis rejoint --w (voir dashboard-view.js) */
 .monthbar__seg {
   flex: none;
   width: var(--w, 0%);
   height: 100%;
-  transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.18s ease-out;
 }
 
 .monthbar__seg--spent { background: var(--pink); }
 
-/* L'à-venir : rayé rose, pour « prévu mais pas encore passé » */
+/* A venir : raye pour prevu mais pas encore passe */
 .key--upcoming,
 .meter__upcoming {
   background:
@@ -283,24 +286,21 @@
 .monthbar__seg--upcoming,
 .hero .key--upcoming {
   background:
-    repeating-linear-gradient(135deg, var(--pink) 0 3px, rgb(255 255 255 / 0.3) 3px 7px);
+    repeating-linear-gradient(135deg, var(--pink) 0 3px, rgb(255 255 255 / 0.28) 3px 7px);
 }
 
-.monthbar__seg--upcoming { transition-delay: 0.12s; }
-
-.monthbar__seg--saved { background: var(--saved); transition-delay: 0.16s; }
+.monthbar__seg--saved { background: var(--saved); }
 
 .monthbar__seg--free {
   display: flex;
   align-items: center;
   overflow: hidden;
   background: var(--positive-field);
-  transition-delay: 0.2s;
 }
 
-.monthbar__seg--over { background: var(--danger); transition-delay: 0.24s; }
+.monthbar__seg--over { background: var(--danger); }
 
-/* Repère « fin des revenus » quand le mois dépasse */
+/* Repere fin des revenus quand le mois depasse */
 .monthbar__mark {
   position: absolute;
   top: 0;
@@ -310,7 +310,6 @@
   margin-left: -1.5px;
   background: #FFFFFF;
   opacity: 0;
-  transition: opacity 0.3s ease 0.6s;
 }
 
 .monthbar[data-over="true"] .monthbar__mark { opacity: 1; }
@@ -337,7 +336,7 @@
   align-items: center;
   gap: 6px 10px;
   margin: 0;
-  color: rgb(255 255 255 / 0.8);
+  color: rgb(255 255 255 / 0.82);
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
 }
@@ -360,7 +359,7 @@
   flex: none;
   width: 12px;
   height: 12px;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .key--spent { background: var(--pink); }
@@ -374,7 +373,7 @@
 .hero__empty { display: grid; gap: 12px; }
 .hero__empty p { margin: 0; color: rgb(255 255 255 / 0.85); max-width: 60ch; }
 .hero .btn--primary { background: #FFFFFF; color: var(--hero); box-shadow: none; }
-.hero .btn--primary:hover:not(:disabled) { background: #F1EDFF; }
+.hero .btn--primary:hover:not(:disabled) { background: #E0EAFF; }
 .hero .btn--ghost { background: transparent; color: #FFFFFF; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.6); }
 .hero .btn--ghost:hover { background: rgb(255 255 255 / 0.12); }
 .hero__empty-actions { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -383,7 +382,7 @@
 .hero.is-empty .monthbar__equation,
 .hero.is-empty .hero__value { display: none; }
 
-/* ——— Grilles et en-têtes ——— */
+/* Grilles et en-tetes */
 
 .dash__grid {
   display: grid;
@@ -400,19 +399,19 @@
   gap: 10px 16px;
 }
 
-/* Filtre actif (catégorie choisie) : une pastille qui se retire d'un clic */
+/* Filtre actif (categorie choisie) */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 5px 10px 5px 12px;
   border: 0;
-  border-radius: var(--r-control);
+  border-radius: 6px;
   background: var(--accent-soft);
   color: var(--accent-strong);
   font: inherit;
   font-size: 0.86rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -426,13 +425,13 @@
 }
 .chip:hover { background: var(--accent-line); color: var(--text); }
 
-/* Bouton d'action discret, à l'allure d'un lien */
+/* Bouton d'action discret */
 .link-btn {
   font: inherit;
   padding: 2px 4px;
   margin: -2px -4px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   background: none;
   color: var(--accent-strong);
   font-weight: 600;
@@ -445,7 +444,7 @@
 .link-btn:hover { text-decoration-color: currentColor; }
 .link-btn:disabled { color: var(--text-muted); text-decoration: none; cursor: progress; }
 
-/* ——— Catégories & enveloppes ——— */
+/* Categories et enveloppes */
 
 .cats__wrap { margin: 0 -8px; }
 
@@ -485,11 +484,11 @@
 .cat-btn {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 4px 8px;
   margin: -4px -8px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 6px;
   background: none;
   color: var(--text);
   font: inherit;
@@ -500,14 +499,13 @@
 
 .cat-btn:hover { background: var(--surface-2); }
 .cat-btn[aria-pressed="true"] { color: var(--accent-strong); }
-.cat-btn .icon { font-size: 1.1rem; line-height: 1; }
+.cat-btn .icon:empty { display: none; }
 
 .cats .amount { font-weight: 600; }
 .cats small { display: block; color: var(--text-muted); font-size: 0.8rem; font-weight: 500; }
 
-/* Écart à la moyenne : flèche + signe, la couleur ne fait que souligner */
+/* Ecart a la moyenne */
 .delta { font-size: 0.92rem; font-weight: 600; white-space: nowrap; }
-/* Écart à la moyenne : chevron + signe ; plus de dépense = rouge, moins = vert */
 .delta[data-trend="up"] { color: var(--danger); }
 .delta[data-trend="down"] { color: var(--positive); }
 .delta[data-trend="flat"],
@@ -532,7 +530,7 @@
   display: flex;
   gap: 2px;
   height: 8px;
-  border-radius: var(--r-control);
+  border-radius: var(--r-mark);
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -542,13 +540,12 @@
   flex: none;
   height: 100%;
   width: var(--w, 0%);
-  transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.18s ease-out;
 }
 
-.meter__fill { background: var(--series-other); border-radius: var(--r-control); }
-.meter__upcoming { border-radius: 0 var(--r-mark) var(--r-mark) 0; transition-delay: 0.12s; }
+.meter__fill { background: var(--series-other); border-radius: var(--r-mark); }
+.meter__upcoming { border-radius: 0 var(--r-mark) var(--r-mark) 0; }
 
-/* Le rail prend un ton plus clair de la couleur d'état */
 .env[data-status="ok"] .meter { background: var(--positive-soft); }
 .env[data-status="ok"] .meter__fill { background: var(--positive); }
 .env[data-status="attention"] .meter { background: var(--warning-soft); }
@@ -599,7 +596,7 @@
   gap: 10px 16px;
   margin: 12px -24px -24px;
   padding: 14px 24px;
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--accent-line);
   border-radius: 0 0 var(--radius) var(--radius);
   background: var(--surface);
 }
@@ -608,7 +605,7 @@
 .env-bar__total strong { color: var(--text); }
 .env-bar__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* ——— Évolution sur 6 mois ——— */
+/* Evolution sur 6 mois : tous les montants sont directement visibles */
 
 .trend {
   position: relative;
@@ -617,7 +614,7 @@
   align-items: end;
   gap: 10px;
   height: 190px;
-  padding-top: 22px;
+  padding-top: 24px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -630,42 +627,40 @@
   height: 100%;
   padding: 0;
   border: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: 6px 6px 0 0;
   background: none;
   font: inherit;
-  cursor: default;
+  cursor: pointer;
 }
 
 .trend__col:hover,
-.trend__col:focus-visible { background: var(--surface-2); }
+.trend__col:focus-visible,
+.trend__col.is-selected { background: var(--surface-2); }
 
 .trend__bar {
   width: min(44px, 70%);
   height: var(--h, 0%);
   border-radius: 4px 4px 0 0;
   background: var(--series-other);
-  transition: height 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: height 0.18s ease-out;
 }
 
 .trend__col.is-current .trend__bar { background: var(--accent-strong); }
+.trend__col.is-selected .trend__bar { box-shadow: inset 0 0 0 2px var(--text); }
 
 .trend__value {
   position: absolute;
   z-index: 1;
-  padding: 0 4px;
+  padding: 1px 4px;
   border-radius: 3px;
   background: var(--surface);
   bottom: calc(var(--h, 0%) + 4px);
   color: var(--text);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-
-.trend__col:not(.is-current):not(.is-max) .trend__value { display: none; }
-.trend__col:hover .trend__value,
-.trend__col:focus-visible .trend__value { display: block; }
 
 .trend__missing {
   margin-bottom: 6px;
@@ -673,13 +668,12 @@
   font-size: 0.75rem;
 }
 
-/* Repère d'enveloppe : trait plein et discret, nommé à droite */
+/* Repere d'enveloppe */
 .trend__limit {
   position: absolute;
   left: 0;
   right: 0;
-  /* Les barres se mesurent dans la zone sous la marge haute (22px) : le trait aussi */
-  bottom: calc((100% - 22px) * var(--hr, 0));
+  bottom: calc((100% - 24px) * var(--hr, 0));
   border-top: 1.5px solid var(--text-muted);
   pointer-events: none;
 }
@@ -706,33 +700,40 @@
   text-align: center;
 }
 
-.trend__labels .is-current { color: var(--text); font-weight: 600; }
+.trend__labels .is-current { color: var(--text); font-weight: 700; }
 
-.trend__readout { margin: 10px 0 0; color: var(--text-muted); font-size: 0.88rem; }
+.trend__readout {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
 .trend__readout:empty { display: none; }
 
-/* ——— Principaux commerçants ——— */
+/* Principaux commercants */
 
 .merchants { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 
 .merchants li { display: grid; gap: 5px; }
 
 .merchants .line {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: 10px;
 }
 
-.merchants .icon { text-align: center; line-height: 1; }
-.merchants .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.merchants .icon:empty { display: none; }
+.merchants .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .merchants .count { color: var(--text-muted); font-size: 0.82rem; font-weight: 500; }
 .merchants .amount { font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .merchants .rail {
   height: 6px;
-  margin-left: 34px;
-  border-radius: var(--r-control);
+  border-radius: var(--r-mark);
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -741,12 +742,12 @@
   display: block;
   width: var(--w, 0%);
   height: 100%;
-  border-radius: var(--r-control);
+  border-radius: var(--r-mark);
   background: var(--accent);
-  transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.18s ease-out;
 }
 
-/* ——— Échéances ——— */
+/* Echeances */
 
 .due__group + .due__group { margin-top: 18px; }
 
@@ -788,7 +789,7 @@
   content: "";
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: 2px;
   background:
     repeating-linear-gradient(135deg, var(--pink) 0 1.5px, transparent 1.5px 4px),
     var(--pink-soft);
@@ -801,7 +802,7 @@
     var(--positive-soft);
 }
 
-/* Groupes repliables : déjà passées / ignorées ce mois-ci */
+/* Groupes repliables */
 .due__more { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
 
 .due__more summary {
@@ -819,7 +820,7 @@
 
 #due-missing .due__amount { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--border); }
 
-/* ——— Répartition : l'anneau, une couleur bonbon par catégorie ——— */
+/* Repartition : anneau et legende */
 
 .split {
   display: grid;
@@ -835,7 +836,7 @@
   fill: none;
   stroke-width: 22;
   stroke-linecap: butt;
-  transition: stroke-dasharray 0.9s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, stroke-width 0.2s ease;
+  transition: stroke-dasharray 0.18s ease-out, opacity 0.12s ease, stroke-width 0.12s ease;
 }
 
 .donut .donut__track { stroke: var(--surface-2); }
@@ -864,38 +865,38 @@
 
 .split__legend button {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto 3.2em;
-  grid-template-areas: "icon name amount share" ". rail rail rail";
+  grid-template-columns: minmax(0, 1fr) auto 3.2em;
+  grid-template-areas: "name amount share" "rail rail rail";
   align-items: center;
   gap: 4px 10px;
   width: 100%;
   padding: 7px 8px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 6px;
   background: none;
   color: var(--text);
   font: inherit;
   font-size: 0.92rem;
   text-align: left;
-  cursor: default;
+  cursor: pointer;
 }
 
 .split__legend button:hover,
 .split__legend button.is-focus { background: var(--surface-2); }
 
-.split__legend .icon { grid-area: icon; text-align: center; line-height: 1; }
-.split__legend .name { grid-area: name; min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+.split__legend .icon:empty { display: none; }
+.split__legend .name { grid-area: name; min-width: 0; overflow-wrap: anywhere; line-height: 1.25; font-weight: 600; }
 .split__legend .amount { grid-area: amount; font-weight: 700; font-variant-numeric: tabular-nums; }
 .split__legend .share { grid-area: share; color: var(--text-muted); text-align: right; font-variant-numeric: tabular-nums; }
-.split__legend .rail { grid-area: rail; display: block; height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
-.split__legend .rail__fill { display: block; width: var(--w, 0%); height: 100%; background: var(--c); border-radius: 999px; }
+.split__legend .rail { grid-area: rail; display: block; height: 6px; border-radius: var(--r-mark); background: var(--surface-2); overflow: hidden; }
+.split__legend .rail__fill { display: block; width: var(--w, 0%); height: 100%; background: var(--c); border-radius: var(--r-mark); }
 
-/* ——— Opérations ——— */
+/* Operations */
 
 .icon-btn--framed { box-shadow: inset 0 0 0 1px var(--border); color: var(--text); }
 .icon-btn--framed:hover { box-shadow: none; }
 
-/* Filtres de la liste : une rangée au-dessus de ce qu'ils filtrent */
+/* Filtres de la liste */
 .ops-filters {
   display: flex;
   flex-wrap: wrap;
@@ -946,7 +947,7 @@
 
 .op {
   display: grid;
-  grid-template-columns: 4.2em 28px minmax(0, 1fr) auto;
+  grid-template-columns: 4.2em minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 10px 6px;
@@ -956,7 +957,7 @@
 .ops__list > li:first-child { border-top: 0; }
 
 .op__date { color: var(--text-muted); font-size: 0.88rem; font-variant-numeric: tabular-nums; }
-.op__icon { font-size: 1.15rem; text-align: center; line-height: 1; }
+.op__icon { display: none; }
 .op__main { display: grid; min-width: 0; }
 .op__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .op__meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-size: 0.84rem; }
@@ -971,7 +972,7 @@
 .op[data-type="entree"] .op__amount { color: var(--positive); }
 .op.is-offbudget .op__amount { color: var(--text-muted); font-weight: 600; }
 
-/* Mode édition : chaque ligne devient un formulaire compact */
+/* Mode edition */
 .op-edit {
   display: grid;
   grid-template-columns: 9.2em minmax(0, 1.5fr) minmax(0, 1.3fr) 7.2em 8.5em 6.5em auto 36px;
@@ -995,16 +996,14 @@
 }
 
 .op-edit [name="amount"] { text-align: right; font-variant-numeric: tabular-nums; }
-/* Le nom bancaire s'affiche comme une valeur : le remplacer crée un nom personnalisé */
 .op-edit [name="note"]::placeholder { color: var(--text); opacity: 0.85; }
 .op-edit .check { font-size: 0.84rem; white-space: nowrap; }
 
-.op-edit.is-dirty { background: var(--accent-soft); border-radius: 10px; border-top-color: transparent; }
-.op-edit.is-doomed { background: var(--danger-soft); border-radius: 10px; border-top-color: transparent; }
+.op-edit.is-dirty { background: var(--accent-soft); border-radius: 6px; border-top-color: transparent; }
+.op-edit.is-doomed { background: var(--danger-soft); border-radius: 6px; border-top-color: transparent; }
 .op-edit.is-doomed label { opacity: 0.45; text-decoration: line-through; }
 .op-edit__delete[aria-pressed="true"] { background: var(--danger); color: #FFFFFF; }
 
-/* Destination d'une ligne d'épargne : sur une seconde ligne, sous le nom */
 .op-edit__dest {
   grid-column: 2 / 4;
   display: flex;
@@ -1025,7 +1024,6 @@
   cursor: pointer;
 }
 
-/* Bandeau Annuler / Valider, collé en bas de la carte pendant l'édition */
 .edit-bar {
   position: sticky;
   bottom: 0;
@@ -1051,25 +1049,22 @@
   gap: 4px 14px;
   margin: 0 0 12px;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: var(--r-control);
   background: var(--positive-soft);
   font-size: 0.92rem;
 }
 
-/* Parties de la barre du mois et parts de l'anneau : cliquables */
-.monthbar__seg.is-action { cursor: pointer; transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1), filter 0.15s ease; }
-.monthbar__seg.is-action:hover { filter: brightness(1.08) saturate(1.1); }
+.monthbar__seg.is-action { cursor: pointer; transition: width 0.18s ease-out, filter 0.12s ease; }
+.monthbar__seg.is-action:hover { filter: brightness(1.08); }
 .monthbar__seg.is-action:focus-visible { outline: 3px solid var(--text); outline-offset: -3px; }
 .donut circle[data-slice] { cursor: pointer; }
-.split__legend button { cursor: pointer; }
 
-/* ——— Petits écrans ——— */
+/* Petits ecrans */
 
 @media (max-width: 860px) {
   .dash__grid { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Tableau des catégories : une carte par ligne sur petit écran */
 @media (max-width: 760px) {
   .cats__wrap { margin: 0; }
   .cats thead { display: none; }
@@ -1088,7 +1083,7 @@
   .cats td.cats__compare:has(.delta[data-trend="none"]) { display: none; }
   .cats tbody tr:has(td.cats__compare .delta[data-trend="none"]) { grid-template-areas: "name amount" "env env"; }
   .cats td.cats__env { grid-area: env; }
-  .cats tbody tr.is-selected { margin: 0 -10px; padding-inline: 10px; border-radius: 14px; }
+  .cats tbody tr.is-selected { margin: 0 -10px; padding-inline: 10px; border-radius: 8px; }
 }
 
 @media (max-width: 560px) {
@@ -1104,12 +1099,11 @@
   .card { padding: 18px 16px 20px; }
   .env-bar { margin-inline: -16px; margin-bottom: -20px; padding-inline: 16px; }
   .op {
-    grid-template-columns: 28px minmax(0, 1fr) auto;
-    grid-template-areas: "icon main amount" "icon date date";
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "main amount" "date date";
     row-gap: 2px;
     column-gap: 10px;
   }
-  .op__icon { grid-area: icon; align-self: start; padding-top: 2px; }
   .op__meta { white-space: normal; }
   .op__main { grid-area: main; }
   .op__amount { grid-area: amount; align-self: start; }
@@ -1136,12 +1130,3 @@
   .ops-filters > label:has(#f-cat) { flex-basis: 100%; }
   .ops-filters select { width: 100%; }
 }
-
-/* Linge de maison : les longueurs ont des bouts francs, comme un fil coupé */
-.meter, .meter__fill, .merchants .rail, .merchants .rail span { border-radius: var(--r-mark); }
-.trend__bar { border-radius: 8px 8px 0 0; }
-
-/* Un total est souligné d'un trait violet */
-.env-bar { border-top: 2px solid var(--accent-line); }
-
-

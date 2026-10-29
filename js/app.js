@@ -7,9 +7,9 @@ import { mountInvestissementView } from './epargne/investissement-view.js';
 import { startAutoBackup } from './backup/backup-core.js';
 import { mountMenu } from './menu.js';
 
-const ROUTES = ['mois', 'epargne', 'investir', 'importer', 'sauvegarde'];
+const ROUTES = ['mois', 'epargne', 'investir', 'importer', 'sauvegarde', 'cgv'];
 
-/** Navigation par ancre : #/mois (par défaut), #/epargne, #/investir, #/importer ou #/sauvegarde. */
+/** Navigation par ancre : #/mois (par defaut), #/epargne, #/investir, #/importer, #/sauvegarde ou #/cgv. */
 function startRouter(dashboard, epargne, investir, backup) {
   const menu = mountMenu();
   const show = () => {

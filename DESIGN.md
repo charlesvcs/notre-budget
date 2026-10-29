@@ -192,9 +192,9 @@ Une rampe de lin pour tous les neutres, deux fils pour toute la couleur ; aucune
 - **Display** (500, clamp 2.4 → 3.2rem, interligne 1, -0.025em) : le reste à vivre posé dans la bande du mois. Une seule fois par écran, en 500 et non en gras.
 - **Headline** (600, clamp 1.4 → 1.9rem, interligne 1.15, -0.02em) : titre de page (le mois, « Épargne », « Importer »).
 - **Title** (600, 1.25rem, -0.01em) : titre de carte (« Reste à vivre », « Catégories & enveloppes », nom d'un livret).
-- **Body** (400, 1rem, interligne 1.45) : texte courant ; aides de carte limitées à 62–70ch.
+- **Body** (400, 1rem, interligne 1.45) : texte courant ; aides de carte limitées à 62 à 70ch.
 - **Figure** (600, 1rem, chiffres tabulaires) : montants des lignes, noms de catégories et d'opérations.
-- **Small** (400, 0.84–0.9rem) : métadonnées des lignes, aides, légendes.
+- **Small** (400, 0.84 à 0.9rem) : métadonnées des lignes, aides, légendes.
 - **Label** (600, 0.8rem) : en-têtes de colonnes, valeurs posées sur les graphiques, étiquettes de repère.
 
 ### Named Rules
@@ -206,7 +206,7 @@ Une rampe de lin pour tous les neutres, deux fils pour toute la couleur ; aucune
 
 Une colonne centrée de 1120px au plus, gouttière de page de 16px. « Le mois » empile : barre d'app (56px, collante), barre d'outils (titre du mois à gauche, sélecteur segmenté à droite), carte « Reste à vivre », tableau « Catégories & enveloppes » pleine largeur, puis une grille de deux cartes (écart de 20px), puis les opérations pleine largeur. « Épargne » suit la même grammaire : grand-livre pleine largeur, cartes des livrets par deux, tableau de bord en widgets par deux (les larges sur toute la ligne).
 
-Rythme : 4px entre éléments serrés, 8–12px entre contrôles, 10px de hauteur de ligne de tableau, 16px sous un en-tête de carte, 20px entre cartes, 24px de rembourrage de carte, 56px en fin de page.
+Rythme : 4px entre éléments serrés, 8 à 12px entre contrôles, 10px de hauteur de ligne de tableau, 16px sous un en-tête de carte, 20px entre cartes, 24px de rembourrage de carte, 56px en fin de page.
 
 Responsive : sous 860px les grilles passent à une colonne ; sous 760px les tableaux (catégories, grand-livre) deviennent des piles par ligne, nom et montant en haut, longueur dessous ; sous 560px le rembourrage des cartes tombe à 18 / 16 / 20px, le sélecteur s'étire sur toute la largeur et le nom de l'app disparaît derrière son icône.
 
@@ -250,7 +250,7 @@ Trois rayons. Cartes à 10px, comme un ourlet ; contrôles (boutons, champs, sé
 - **En-tête :** titre en Title, aide en encre douce dessous, action fantôme à droite.
 
 ### Inputs / Fields
-- **Style :** toile, fil d'un pixel, 8px, hauteur 40px (36–38px dans les filtres et l'édition en ligne).
+- **Style :** toile, fil d'un pixel, 8px, hauteur 40px (36 à 38px dans les filtres et l'édition en ligne).
 - **Focus :** anneau indigo moyen de 3px, décalé de 2px, sur tous les éléments focusables.
 - **Erreur :** bord et anneau d'un pixel garance, message 600 sous le champ. Cases à cocher natives teintées indigo.
 
@@ -275,7 +275,7 @@ Les données sont des longueurs indigo ; l'historique et les références en lin
 Les emoji sont des données saisies par l'utilisateur ; ils s'affichent désaturés (niveaux de gris, 75 % d'opacité ; en sombre luminosité 1.6 à 90 %) pour qu'aucune couleur ne parle à la place des montants. Question ouverte auprès de l'utilisateur : les remplacer par un jeu d'icônes dessinées. Aucun nouvel élément d'interface ne doit s'appuyer sur un emoji.
 
 ### Icône de l'app
-Carré violet arrondi (`#6C47FF`), trois barres ascendantes (rose `#F0509A`, lavande `#EDE8FF`, menthe `#0FA89A`) surmontées d'une pièce dorée (`#FFB020`).
+Carré bleu marine arrondi (`#112239`), trois barres ascendantes à coins francs (`#0D9488`, `#1D4ED8`, `#10B981`) surmontées d'une pièce ambrée (`#F59E0B`).
 
 ## Do's and Don'ts
 

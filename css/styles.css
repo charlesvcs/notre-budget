@@ -1,6 +1,6 @@
-/* Base : tokens, reset et éléments partagés. */
+/* Base : variables, remise a zero et elements partages. */
 
-/* Nunito (SIL Open Font License, voir fonts/OFL-Nunito.txt), servie depuis l'app */
+/* Nunito (SIL Open Font License, voir fonts/OFL-Nunito.txt), servie depuis l'application */
 @font-face {
   font-family: "Nunito";
   src: url("../fonts/nunito-latin-var.woff2") format("woff2");
@@ -10,44 +10,45 @@
 }
 
 :root {
-  /* Bonbon fintech : fond lilas, violet électrique qui agit, couleurs bonbon qui identifient */
-  --bg: #F4F1FF;            /* lilas pâle */
+  /* Palette Dopamine Core sans violet : contraste franc, energie visuelle et lecture immediate */
+  --bg: #F6F5F0;            /* albatre chaud */
   --surface: #FFFFFF;
-  --surface-2: #F1EDFF;     /* rails, survols, sous-zones */
-  --border: #E6E0FA;
-  --text: #1B1530;          /* encre violette */
-  --text-muted: #645C7D;
-  --accent: #8B6DFF;        /* focus, rayé de l'à-venir */
-  --accent-strong: #6C47FF; /* violet électrique : action, sélection */
-  --accent-soft: #ECE6FF;
-  --accent-line: #C6B8FF;
-  --hero: #6C47FF;          /* la seule grande carte pleine : le reste à vivre */
-  --pink: #F0509A;          /* rose bonbon : dépensé, à venir */
-  --pink-soft: #FFE3F0;
-  --positive: #0E8A43;      /* gains, rentrées, « dans l'enveloppe » */
+  --surface-2: #EEECE4;     /* rails, survols, sous-zones */
+  --border: #DEDAD0;
+  --text: #141A24;          /* encre ardoise profonde */
+  --text-muted: #586174;
+  --accent: #2563EB;        /* bleu cobalt vif : focus, selection */
+  --accent-strong: #1D4ED8; /* bleu cobalt profond : action primaire */
+  --accent-soft: #E0EAFF;
+  --accent-line: #93B4FD;
+  --hero: #112239;          /* bleu nuit profond : carte principale du mois */
+  --pink: #E11D48;          /* corail : depense, a venir */
+  --pink-soft: #FFE4E8;
+  --positive: #0E8A43;      /* emeraude : gains, rentrees, dans l'enveloppe */
   --positive-soft: #DDF7E8;
-  --positive-field: #FFFFFF; /* la partie libre du mois */
-  --saved: #0FA89A;         /* turquoise : épargne */
-  --warning: #F59E0B;       /* mangue : bientôt atteint */
-  --warning-soft: #FFF1D6;
-  --warning-ink: #8A5300;
-  --danger: #D7263D;        /* rouge : pertes et dépassements */
-  --danger-soft: #FFE1E5;
+  --positive-field: #FFFFFF; /* partie libre du mois */
+  --saved: #0D9488;         /* turquoise : epargne et versements */
+  --saved-soft: #CCFBF1;
+  --warning: #D97706;       /* ambre vif : bientot atteint, actions */
+  --warning-soft: #FEF3C7;
+  --warning-ink: #854D0E;
+  --danger: #DC2626;        /* rouge : pertes et depassements */
+  --danger-soft: #FEE2E2;
 
-  /* Pastilles bonbon : catégories et livrets (validées daltonisme, légende toujours écrite) */
-  --series-1: #6C47FF;
-  --series-2: #F0509A;
-  --series-3: #E89A10;
-  --series-4: #2F7BEA;
-  --series-5: #0FA89A;
-  --series-other: #C9C2DD;
-  --shadow: 0 1px 2px rgb(44 22 120 / 0.06), 0 10px 30px rgb(76 46 190 / 0.10);
-  --shadow-sm: 0 1px 2px rgb(44 22 120 / 0.08), 0 4px 12px rgb(76 46 190 / 0.08);
+  /* Series graphiques : contraste fort et lisible sans violet */
+  --series-1: #1D4ED8;
+  --series-2: #0D9488;
+  --series-3: #D97706;
+  --series-4: #E11D48;
+  --series-5: #0E8A43;
+  --series-other: #94A3B8;
+  --shadow: 0 1px 3px rgb(20 26 36 / 0.06), 0 8px 24px rgb(20 26 36 / 0.07);
+  --shadow-sm: 0 1px 2px rgb(20 26 36 / 0.06), 0 3px 8px rgb(20 26 36 / 0.05);
 
-  --radius: 20px;
-  --r-control: 999px;       /* boutons, onglets, segments : des pilules */
-  --r-input: 12px;
-  --r-mark: 999px;          /* rails */
+  --radius: 12px;
+  --r-control: 8px;         /* boutons, onglets, segments : angles francs arrondis, pas de pilules */
+  --r-input: 8px;
+  --r-mark: 4px;            /* rails et barres */
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-display: "Nunito", var(--font);
 
@@ -59,36 +60,36 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #120E22;
-    --surface: #1C1733;
-    --surface-2: #251F42;
-    --border: #342C57;
-    --text: #F3F0FF;
-    --text-muted: #B4AACF;
-    --accent: #A48BFF;
-    --accent-strong: #9B82FF;
-    --accent-soft: #2C2452;
-    --accent-line: #5B4A9E;
-    --hero: #4F33D1;
-    --pink: #FF6FAE;
-    --pink-soft: #3D1B33;
-    --positive: #3DD68C;
-    --positive-soft: #163A2A;
-    --positive-field: #F3F0FF;
-    --saved: #22C1B1;
-    --warning: #FFB020;
-    --warning-soft: #3A2A10;
-    --warning-ink: #FFC266;
-    --danger: #FF6B7A;
-    --danger-soft: #3D1A22;
-    --series-1: #8B6DFF;
-    --series-2: #E2508F;
-    --series-3: #C0821A;
-    --series-4: #4A8DF0;
-    --series-5: #139C8E;
-    --series-other: #4B4368;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 30px rgb(0 0 0 / 0.35);
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.25);
+    --bg: #0E141D;
+    --surface: #151E2B;
+    --surface-2: #1E2A3B;
+    --border: #2C3B52;
+    --text: #F1F5F9;
+    --text-muted: #94A3B8;
+    --accent: #60A5FA;
+    --accent-strong: #3B82F6;
+    --accent-soft: #1E3A5F;
+    --accent-line: #2563EB;
+    --hero: #162B47;
+    --pink: #FB7185;
+    --pink-soft: #3F1A26;
+    --positive: #34D399;
+    --positive-soft: #13392A;
+    --positive-field: #F1F5F9;
+    --saved: #2DD4BF;
+    --warning: #FBBF24;
+    --warning-soft: #3B2A10;
+    --warning-ink: #FDE68A;
+    --danger: #F87171;
+    --danger-soft: #3B1A1E;
+    --series-1: #3B82F6;
+    --series-2: #2DD4BF;
+    --series-3: #F59E0B;
+    --series-4: #FB7185;
+    --series-5: #34D399;
+    --series-other: #475569;
+    --shadow: 0 1px 3px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35), 0 3px 8px rgb(0 0 0 / 0.25);
   }
 }
 
@@ -126,8 +127,9 @@ body {
   outline-offset: 2px;
 }
 
-/* ——— Champs ——— */
+/* Champs de saisie */
 input[type="text"],
+input[type="number"],
 input[type="date"],
 input[type="month"],
 select {
@@ -142,7 +144,7 @@ select {
   min-width: 0;
 }
 
-/* iOS : sans cela, les champs date et mois gardent une largeur propre et débordent */
+/* iOS : garde une largeur maitrisee sur les champs date et mois */
 input[type="date"],
 input[type="month"] {
   -webkit-appearance: none;
@@ -166,26 +168,26 @@ input[aria-invalid="true"] {
   box-shadow: 0 0 0 1px var(--danger);
 }
 
-/* ——— Boutons ——— */
+/* Boutons : angles francs (8px), reactivite immediate sans animation lente */
 .btn {
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   border: 0;
   border-radius: var(--r-control);
-  padding: 11px 22px;
-  min-height: 44px;
+  padding: 10px 18px;
+  min-height: 42px;
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+  transition: background-color 0.1s ease, color 0.1s ease, opacity 0.1s ease;
 }
 
-.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-.btn--primary { background: var(--accent-strong); color: #FFFFFF; box-shadow: 0 6px 16px rgb(108 71 255 / 0.28); }
-.btn--primary:hover:not(:disabled) { background: #5A35F0; }
+.btn--primary { background: var(--accent-strong); color: #FFFFFF; }
+.btn--primary:hover:not(:disabled) { background: #1E40AF; }
 .btn--ghost { background: var(--surface); color: var(--accent-strong); box-shadow: inset 0 0 0 1.5px var(--accent-line); }
-.btn--ghost:hover { background: var(--accent-soft); }
-.btn--small { padding: 6px 14px; min-height: 34px; font-size: 0.88rem; }
+.btn--ghost:hover:not(:disabled) { background: var(--accent-soft); }
+.btn--small { padding: 6px 12px; min-height: 34px; font-size: 0.86rem; }
 a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 
 ::selection { background: var(--accent-line); color: var(--text); }
@@ -193,8 +195,8 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
 html { scrollbar-color: var(--border) transparent; caret-color: var(--accent-strong); }
 
 @media (prefers-color-scheme: dark) {
-  .btn--primary { color: #120E22; box-shadow: none; }
-  .btn--primary:hover:not(:disabled) { background: #B3A0FF; }
+  .btn--primary { color: #0E141D; }
+  .btn--primary:hover:not(:disabled) { background: #60A5FA; }
 }
 
 .icon-btn {
@@ -203,7 +205,7 @@ html { scrollbar-color: var(--border) transparent; caret-color: var(--accent-str
   width: 36px;
   height: 36px;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--r-control);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -215,6 +217,93 @@ html { scrollbar-color: var(--border) transparent; caret-color: var(--accent-str
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
-/* Titres et gros chiffres en Nunito, arrondie et pétillante ; le texte reste en police système */
+/* Titres et chiffres cles en Nunito ; texte courant en police systeme */
 h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.01em; }
 strong, b { font-weight: 700; }
+
+/* Pied de page et Conditions generales (CGV / CGU) */
+.app-footer {
+  max-width: 1120px;
+  margin: 24px auto 0;
+  padding: 18px 0 32px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.app-footer p { margin: 0; }
+
+.app-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.app-footer__links a {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+
+.app-footer__links a:hover {
+  color: var(--accent-strong);
+  text-decoration-color: var(--accent-strong);
+}
+
+.cgv {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 24px 0 56px;
+  display: grid;
+  gap: 20px;
+}
+
+.cgv__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 20px;
+}
+
+.cgv__head h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem);
+}
+
+.cgv__section {
+  display: grid;
+  gap: 10px;
+}
+
+.cgv__section h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+.cgv__section p,
+.cgv__section ul {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.cgv__section ul {
+  padding-left: 1.3em;
+  display: grid;
+  gap: 6px;
+}
+
+.cgv__meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}

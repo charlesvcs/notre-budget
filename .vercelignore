@@ -2,6 +2,8 @@
 sauvegardes/
 scripts/
 .impeccable/
+.agents/
+skills-lock.json
 *.command
 PRODUCT.md
 DESIGN.md

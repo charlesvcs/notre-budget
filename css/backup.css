@@ -1,9 +1,9 @@
-/* ——— Écran « Sauvegarde » ——— */
+/* Ecran Sauvegarde */
 
 .backup {
   max-width: 760px;
   margin: 0 auto;
-  padding: 32px 0 56px;
+  padding: 24px 0 56px;
   display: grid;
   gap: 20px;
 }
@@ -14,7 +14,7 @@
 .backup-status {
   margin: 0;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--r-control);
   background: var(--surface-2);
   font-size: 0.95rem;
   overflow-wrap: anywhere;
@@ -54,7 +54,7 @@
 .btn--danger { background: var(--danger); color: #FFFFFF; }
 @media (prefers-color-scheme: dark) { .btn--danger { color: #2A1016; } }
 
-/* Bandeau sur « Le mois » quand la sauvegarde du Mac est désactivée ou en échec */
+/* Bandeau sur Le mois quand la sauvegarde automatique est desactivee ou en echec */
 .backup-banner {
   display: flex;
   flex-wrap: wrap;
@@ -62,7 +62,7 @@
   gap: 4px 14px;
   margin: 0;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: var(--r-control);
   background: var(--warning-soft);
   color: var(--warning-ink);
   font-size: 0.92rem;

@@ -1,16 +1,14 @@
 # Product
 
-<!-- impeccable:product-schema 1 -->
-
 ## Platform
 
 web
 
 ## Users
-Toute personne souhaitant suivre son budget et son épargne simplement, en solo ou à plusieurs (second profil et/ou compte commun activables à la demande). Usage sur ordinateur (import des relevés PDF, analyse du mois) et sur smartphone en PWA installée.
+Toute personne souhaitant suivre son budget, son épargne et son patrimoine simplement, en solo ou à plusieurs (second profil et/ou compte commun activables à la demande). Usage sur ordinateur (import des relevés PDF, analyse du mois, projections patrimoniales) et sur smartphone en PWA installée.
 
 ## Product Purpose
-« Mon Budget » : savoir où en est le mois — combien il reste pour vivre, quelles catégories dérapent, où part l'argent — à partir des relevés bancaires PDF, sans jamais envoyer de données personnelles sur Internet. Succès : un coup d'œil suffit pour savoir si le mois est tenu.
+« Mon Budget » : savoir où en est le mois (combien il reste pour vivre, quelles catégories dérapent, où part l'argent) et piloter l'étendue de son patrimoine actuel et futur (Livrets réglementés et PEA) à partir des relevés bancaires PDF, sans jamais envoyer de données personnelles sur Internet. Succès : un coup d'œil suffit pour savoir si le mois est tenu et comment évolue le patrimoine.
 
 ## Positioning
 100 % local : relevés lus dans le navigateur, catégorisation par mots-clés et règles apprises, données dans IndexedDB. Aucun compte, aucun serveur, aucune synchronisation bancaire.
@@ -26,12 +24,11 @@ Toute personne souhaitant suivre son budget et son épargne simplement, en solo 
 - Reste à vivre = revenus du mois − dépenses déjà passées − dépenses mensualisées pas encore passées ce mois-ci.
 - Une opération cochée « Mensualiser » est attendue chaque mois au même montant ; tant qu'aucune opération du même commerçant n'est apparue ce mois-ci, elle compte comme « à venir » (détection automatique).
 - L'épargne et les virements internes sont exclus des dépenses, des jauges, de la répartition et du reste à vivre.
-- Budgets : plafond mensuel par catégorie et par profil ; jauge verte < 75 %, orange 75–100 %, rouge > 100 %.
-- Écran « Épargne » : Livret A et LEP. Solde de départ saisi, virements retrouvés dans les relevés, intérêts calculés par quinzaine et versés au 31 décembre, plafonds, rendement réel face à l'inflation INSEE sur un an, projection à 3, 5 ou 10 ans (taux actuels maintenus, versements mensualisés poursuivis). Taux et inflation mis à jour automatiquement depuis les sources officielles (toutes les 12 h, désactivable), avec saisie manuelle possible. Intérêts composés (capitalisation au 31 décembre, part « intérêts sur intérêts » affichée) ; projection avec tous les virements réguliers repérés (mensualisés, « virement permanent », ou même montant 2 mois sur 3). Chaque ligne d'épargne de « Le mois » indique son livret (d'après le libellé) et peut être dirigée vers un autre livret ou « Autre placement » en mode édition (crayon → Valider).
-- Matelas de sécurité : nombre de mois de dépenses moyennes (mesurées dans les relevés) couverts par les livrets, face à la fourchette conseillée de 3 à 6 mois. Repères PEA (onglet « Investir ») : rendement moyen des indices mondiaux (MSCI World, MSCI ACWI) et repères (S&P 500, CAC 40 GR) sur 5 ou 10 ans, et imposition moyenne d'un PEA selon sa durée (données livrées avec l'app, à rafraîchir chaque janvier).
-- Onglet « Investir » : portefeuilles (PEA), objectifs (montant, échéance, déjà mis de côté, versement mensuel) confrontés aux stratégies livrets, prudente, équilibrée et dynamique (valeur nette, écart, versement nécessaire, risque d'une chute type 2008), et repères (indices, fiscalité du PEA).
-- Suivi d'un PEA par personne : lignes d'ETF saisies (valeur, frais), total versé, plus-value latente, fiscalité selon l'âge du plan, et projection avec un versement mensuel modifiable (hypothèses passé 10 ans, prudent 5 %, pessimiste 2 %).
-- Export Excel (.xlsx) depuis l'écran Épargne : une feuille par table, formules visibles, graphiques Excel natifs, fabriqué dans le navigateur.
+- Budgets : plafond mensuel par catégorie et par profil ; jauge verte < 75 %, orange 75 à 100 %, rouge > 100 %.
+- Écran « Épargne » : Livret A et LEP. Solde de départ saisi, virements retrouvés dans les relevés, intérêts calculés par quinzaine et versés au 31 décembre, plafonds, rendement réel face à l'inflation INSEE sur un an, projection interactive à 3, 5, 10 ou 15 ans avec sélection au clic et tableau annuel complet.
+- Onglet « Investir » : vue consolidée du Patrimoine Global (Livrets + PEA, répartition, projection à 5, 10, 15 et 20 ans avec rente mensuelle à 4 %), portefeuilles PEA avec projection interactive jusqu'à 25 ans, objectifs confrontés aux stratégies, et repères (indices, fiscalité du PEA).
+- Export Excel (.xlsx) : feuilles maîtresses « Bilan Patrimoine » et « Projection 25 ans » pilotées par formules Excel modifiables, feuilles de détail par livret et par PEA, graphiques Excel natifs, fabriqué localement dans le navigateur.
+- Conditions Générales d'Utilisation et Mentions Légales (`#/cgv`) intégrées à l'application.
 - Aucune ressource externe à l'exécution (CSP `'self'`) ; tout est servi localement.
 
 ## Brand Commitments

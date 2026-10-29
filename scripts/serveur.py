@@ -35,7 +35,7 @@ MAX_BYTES = 50 * 1024 * 1024
 KEEP_HISTORY = 20
 LOCAL_HOSTS = {"localhost", "127.0.0.1"}
 
-# ——— Taux officiels des livrets (service-public.gouv.fr) ———————————————
+# Taux officiels des livrets (service-public.gouv.fr)
 LIVRET_PAGES = {
     "livretA": ("https://www.service-public.gouv.fr/particuliers/vosdroits/F2365", "livret A"),
     "lep": ("https://www.service-public.gouv.fr/particuliers/vosdroits/F2367", "LEP"),

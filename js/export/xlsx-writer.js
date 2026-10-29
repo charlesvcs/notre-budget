@@ -13,47 +13,55 @@
  *   sheet.row(['Livret', 'Solde'], 'header');
  *   sheet.row(['Livret A', { v: 8421.5, s: 'euro' }]);
  *   sheet.chart({ type: 'col', title: '…', from: 'D2', to: 'L18', categories: 'A2:A3',
- *                 series: [{ name: 'Solde', ref: 'B2:B3', color: '6C47FF' }] });
+ *                 series: [{ name: 'Solde', ref: 'B2:B3', color: '1D4ED8' }] });
  *   const blob = wb.toBlob();
  */
 
-// ——— Styles ——————————————————————————————————————————————————————
+/* Styles */
 
 // Ordre = index cellXfs dans styles.xml
 const STYLE_IDS = {
   default: 0, header: 1, euro: 2, euroBold: 3, percent: 4, date: 5, title: 6, note: 7, bold: 8,
   number: 9, percentBold: 10, link: 11, months: 12, euroTotal: 13, boldTotal: 14,
+  subhead: 15, param: 16, euroGain: 17, percentGain: 18, integer: 19,
 };
 
 const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="5">
-<numFmt numFmtId="164" formatCode="#,##0.00&quot; €&quot;;&quot;−&quot;#,##0.00&quot; €&quot;"/>
-<numFmt numFmtId="165" formatCode="0.00&quot; &quot;%;&quot;−&quot;0.00&quot; &quot;%"/>
+<numFmts count="6">
+<numFmt numFmtId="164" formatCode="#,##0.00&quot; €&quot;;&quot;−&quot;#,##0.00&quot; €&quot;"/>
+<numFmt numFmtId="165" formatCode="0.00&quot; &quot;%;&quot;−&quot;0.00&quot; &quot;%"/>
 <numFmt numFmtId="166" formatCode="dd/mm/yyyy"/>
 <numFmt numFmtId="167" formatCode="0.0"/>
-<numFmt numFmtId="168" formatCode="0.0&quot; mois&quot;"/>
+<numFmt numFmtId="168" formatCode="0.0&quot; mois&quot;"/>
+<numFmt numFmtId="169" formatCode="#,##0"/>
 </numFmts>
-<fonts count="6">
-<font><sz val="11"/><color rgb="FF1B1530"/><name val="Calibri"/><family val="2"/></font>
-<font><b/><sz val="11"/><color rgb="FF1B1530"/><name val="Calibri"/><family val="2"/></font>
-<font><b/><sz val="14"/><color rgb="FF6C47FF"/><name val="Calibri"/><family val="2"/></font>
-<font><i/><sz val="10"/><color rgb="FF645C7D"/><name val="Calibri"/><family val="2"/></font>
+<fonts count="8">
+<font><sz val="11"/><color rgb="FF141A24"/><name val="Calibri"/><family val="2"/></font>
+<font><b/><sz val="11"/><color rgb="FF141A24"/><name val="Calibri"/><family val="2"/></font>
+<font><b/><sz val="14"/><color rgb="FF1D4ED8"/><name val="Calibri"/><family val="2"/></font>
+<font><i/><sz val="10"/><color rgb="FF586174"/><name val="Calibri"/><family val="2"/></font>
 <font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>
-<font><u/><sz val="11"/><color rgb="FF6C47FF"/><name val="Calibri"/><family val="2"/></font>
+<font><u/><sz val="11"/><color rgb="FF1D4ED8"/><name val="Calibri"/><family val="2"/></font>
+<font><b/><sz val="11"/><color rgb="FF15803D"/><name val="Calibri"/><family val="2"/></font>
+<font><b/><sz val="11"/><color rgb="FF1E3A8A"/><name val="Calibri"/><family val="2"/></font>
 </fonts>
-<fills count="3">
+<fills count="6">
 <fill><patternFill patternType="none"/></fill>
 <fill><patternFill patternType="gray125"/></fill>
-<fill><patternFill patternType="solid"><fgColor rgb="FF6C47FF"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF112239"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFEFF6FF"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFFEF9C3"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FFF0FDF4"/><bgColor indexed="64"/></patternFill></fill>
 </fills>
-<borders count="3">
+<borders count="4">
 <border><left/><right/><top/><bottom/><diagonal/></border>
-<border><left/><right/><top/><bottom style="thin"><color rgb="FFE6E0FA"/></bottom><diagonal/></border>
-<border><left/><right/><top style="double"><color rgb="FF6C47FF"/></top><bottom style="thin"><color rgb="FFE6E0FA"/></bottom><diagonal/></border>
+<border><left/><right/><top/><bottom style="thin"><color rgb="FFD8DFEB"/></bottom><diagonal/></border>
+<border><left/><right/><top style="double"><color rgb="FF1D4ED8"/></top><bottom style="thin"><color rgb="FFD8DFEB"/></bottom><diagonal/></border>
+<border><left style="thin"><color rgb="FFBFDBFE"/></left><right style="thin"><color rgb="FFBFDBFE"/></right><top style="thin"><color rgb="FFBFDBFE"/></top><bottom style="thin"><color rgb="FFBFDBFE"/></bottom><diagonal/></border>
 </borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="15">
+<cellXfs count="20">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="4" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
 <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
@@ -67,13 +75,18 @@ const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xf numFmtId="165" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>
 <xf numFmtId="0" fontId="5" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>
 <xf numFmtId="168" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
-<xf numFmtId="164" fontId="1" fillId="0" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>
-<xf numFmtId="0" fontId="1" fillId="0" borderId="2" xfId="0" applyFont="1" applyBorder="1"/>
+<xf numFmtId="164" fontId="1" fillId="3" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="1" fillId="3" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="7" fillId="3" borderId="3" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="1" fillId="4" borderId="3" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="164" fontId="6" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="165" fontId="6" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>
+<xf numFmtId="169" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
 
-// ——— Utilitaires ———————————————————————————————————————————————————
+/* Utilitaires */
 
 const esc = (text) => String(text)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -110,7 +123,7 @@ const absRange = (range) => range.split(':').map((r) => {
   return `$${colName(col)}$${row + 1}`;
 }).join(':');
 
-// ——— Feuille ———————————————————————————————————————————————————————
+/* Feuille */
 
 class Sheet {
   constructor(name, { widths = [], freeze = 0 } = {}) {
@@ -174,8 +187,8 @@ class Sheet {
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
 <dimension ref="${dim}"/>
-<sheetViews><sheetView workbookViewId="0" showGridLines="0">${pane}</sheetView></sheetViews>
-<sheetFormatPr defaultRowHeight="15"/>
+<sheetViews><sheetView workbookViewId="0" showGridLines="1">${pane}</sheetView></sheetViews>
+<sheetFormatPr defaultRowHeight="16"/>
 ${cols}<sheetData>${rows}</sheetData>${merges}
 <pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>
 ${drawingRid ? `<drawing r:id="${drawingRid}"/>` : ''}
@@ -198,11 +211,11 @@ function cellXml(cell, ref) {
   return `<c r="${ref}" t="inlineStr"${style}><is><t xml:space="preserve">${esc(cell.v)}</t></is></c>`;
 }
 
-// ——— Graphiques (DrawingML) ———————————————————————————————————————
+/* Graphiques (DrawingML) */
 
 const C_NS = 'xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
 
-const txPr = (size = 900, color = '645C7D') => `<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${size}"><a:solidFill><a:srgbClr val="${color}"/></a:solidFill></a:defRPr></a:pPr><a:endParaRPr lang="fr-FR"/></a:p></c:txPr>`;
+const txPr = (size = 900, color = '586174') => `<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${size}"><a:solidFill><a:srgbClr val="${color}"/></a:solidFill></a:defRPr></a:pPr><a:endParaRPr lang="fr-FR"/></a:p></c:txPr>`;
 
 function strCache(values) {
   return `<c:strCache><c:ptCount val="${values.length}"/>${values.map((v, i) => `<c:pt idx="${i}"><c:v>${esc(v ?? '')}</c:v></c:pt>`).join('')}</c:strCache>`;
@@ -231,27 +244,27 @@ function chartXml(sheet, o) {
 
   const plot = o.type === 'line'
     ? `<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>${series}<c:marker val="1"/><c:axId val="5001"/><c:axId val="5002"/></c:lineChart>`
-    : `<c:barChart><c:barDir val="${o.type === 'bar' ? 'bar' : 'col'}"/><c:grouping val="clustered"/><c:varyColors val="0"/>${series}<c:gapWidth val="60"/><c:overlap val="-10"/><c:axId val="5001"/><c:axId val="5002"/></c:barChart>`;
+    : `<c:barChart><c:barDir val="${o.type === 'bar' ? 'bar' : 'col'}"/><c:grouping val="${o.stacked ? 'stacked' : 'clustered'}"/><c:varyColors val="0"/>${series}<c:gapWidth val="60"/><c:overlap val="${o.stacked ? '100' : '-10'}"/><c:axId val="5001"/><c:axId val="5002"/></c:barChart>`;
 
-  const grid = '<c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="ECE6FF"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>';
-  const axisLine = '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="C6B8FF"/></a:solidFill></a:ln></c:spPr>';
+  const grid = '<c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="E2E8F0"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>';
+  const axisLine = '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="94A3B8"/></a:solidFill></a:ln></c:spPr>';
   const catPos = o.type === 'bar' ? 'l' : 'b';
   const valPos = o.type === 'bar' ? 'b' : 'l';
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <c:chartSpace ${C_NS}>
 <c:roundedCorners val="0"/>
 <c:chart>
-<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1200" b="1"><a:solidFill><a:srgbClr val="1B1530"/></a:solidFill></a:defRPr></a:pPr><a:r><a:rPr lang="fr-FR" sz="1200" b="1"><a:solidFill><a:srgbClr val="1B1530"/></a:solidFill></a:rPr><a:t>${esc(o.title)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>
+<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1200" b="1"><a:solidFill><a:srgbClr val="141A24"/></a:solidFill></a:defRPr></a:pPr><a:r><a:rPr lang="fr-FR" sz="1200" b="1"><a:solidFill><a:srgbClr val="141A24"/></a:solidFill></a:rPr><a:t>${esc(o.title)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>
 <c:autoTitleDeleted val="0"/>
 <c:plotArea><c:layout/>${plot}
 <c:catAx><c:axId val="5001"/><c:scaling><c:orientation val="${o.type === 'bar' ? 'maxMin' : 'minMax'}"/></c:scaling><c:delete val="0"/><c:axPos val="${catPos}"/><c:numFmt formatCode="General" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="low"/>${axisLine}${txPr()}<c:crossAx val="5002"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>
-<c:valAx><c:axId val="5002"/><c:scaling><c:orientation val="minMax"/>${o.min != null ? `<c:min val="${o.min}"/>` : ''}</c:scaling><c:delete val="0"/><c:axPos val="${valPos}"/>${grid}${o.axisTitle ? `<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"/></a:pPr><a:r><a:rPr lang="fr-FR" sz="900"/><a:t>${esc(o.axisTitle)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>` : ''}<c:numFmt formatCode="${o.percent ? '0.0 %' : '#,##0'}" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr>${txPr()}<c:crossAx val="5001"/><c:crosses val="${o.type === 'bar' ? 'max' : 'autoZero'}"/><c:crossBetween val="between"/></c:valAx>
+<c:valAx><c:axId val="5002"/><c:scaling><c:orientation val="minMax"/>${o.min != null ? `<c:min val="${o.min}"/>` : ''}</c:scaling><c:delete val="0"/><c:axPos val="${valPos}"/>${grid}${o.axisTitle ? `<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"/></a:pPr><a:r><a:rPr lang="fr-FR" sz="900"/><a:t>${esc(o.axisTitle)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>` : ''}<c:numFmt formatCode="${o.percent ? '0.0 %' : '#,##0'}" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr>${txPr()}<c:crossAx val="5001"/><c:crosses val="${o.type === 'bar' ? 'max' : 'autoZero'}"/><c:crossBetween val="between"/></c:valAx>
 <c:spPr><a:noFill/></c:spPr>
 </c:plotArea>
-<c:legend><c:legendPos val="b"/><c:overlay val="0"/>${txPr(900, '1B1530')}</c:legend>
+<c:legend><c:legendPos val="b"/><c:overlay val="0"/>${txPr(900, '141A24')}</c:legend>
 <c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/>
 </c:chart>
-<c:spPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="E6E0FA"/></a:solidFill></a:ln></c:spPr>
+<c:spPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="D8DFEB"/></a:solidFill></a:ln></c:spPr>
 <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr><a:latin typeface="Calibri"/></a:defRPr></a:pPr><a:endParaRPr lang="fr-FR"/></a:p></c:txPr>
 </c:chartSpace>`;
 }
@@ -272,7 +285,7 @@ function drawingXml(charts, firstChartRid) {
 <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${anchors}</xdr:wsDr>`;
 }
 
-// ——— Classeur ——————————————————————————————————————————————————————
+/* Classeur */
 
 export class Workbook {
   constructor({ title = '', author = '' } = {}) {
@@ -370,7 +383,7 @@ const rels = (list) => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${list
   .map(([id, type, target]) => `<Relationship Id="${id}" Type="${REL_TYPES[type]}" Target="${target}"/>`).join('')}</Relationships>`;
 
-// ——— ZIP (méthode « stockée », sans compression) ————————————————————
+/* ZIP (méthode « stockée », sans compression) */
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);

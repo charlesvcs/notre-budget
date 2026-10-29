@@ -1,5 +1,5 @@
 /**
- * Objectifs d'investissement face aux stratégies — fonctions pures.
+ * Objectifs d'investissement face aux stratégies (fonctions pures).
  *
  * Une stratégie répartit l'argent entre une poche sûre (livrets, au taux du Livret A,
  * sans impôt) et une poche actions (ETF dans un PEA, frais déduits). Pour un objectif

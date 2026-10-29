@@ -1,19 +1,14 @@
 /**
- * Calcul des livrets réglementés — fonctions pures, sans accès à la base.
+ * Calcul des livrets reglementes : fonctions pures, sans acces a la base.
  *
- * Règles appliquées (Livret A et LEP) :
- *  - l'année compte 24 quinzaines (du 1er au 15, du 16 à la fin du mois) ;
- *  - un versement rapporte à partir de la quinzaine qui suit ;
- *  - un retrait cesse de rapporter dès sa propre quinzaine ;
- *  - intérêts d'une quinzaine = solde en valeur × taux / 24, au taux en
+ * Regles appliquees (Livret A et LEP) :
+ *  - l'annee compte 24 quinzaines (du 1er au 15, du 16 a la fin du mois) ;
+ *  - un versement rapporte a partir de la quinzaine qui suit ;
+ *  - un retrait cesse de rapporter des sa propre quinzaine ;
+ *  - interets d'une quinzaine = solde en valeur * taux / 24, au taux en
  *    vigueur le premier jour de la quinzaine ;
- *  - les intérêts sont versés au 31 décembre et rapportent ensuite à leur tour ;
- *  - au-delà du plafond, plus de versement possible (les intérêts, eux, s'ajoutent).
- *
- * Le solde de départ n'est pas connu : on part du solde que vous avez saisi
- * (le « solde connu », à une date) et on le reconstitue avec les virements
- * des relevés importés. Comme le calcul est linéaire en le solde de départ,
- * deux simulations suffisent pour le retrouver exactement.
+ *  - les interets sont verses au 31 decembre et rapportent ensuite a leur tour ;
+ *  - au-dela du plafond, plus de versement possible (les interets, eux, s'ajoutent).
  */
 import { normalizeLabel } from '../import/categorizer.js';
 import { PRODUCTS, rateOn, rateWindow } from './livret-rates.js';
@@ -21,11 +16,11 @@ import { PRODUCTS, rateOn, rateWindow } from './livret-rates.js';
 const DAY_MS = 86400000;
 const PLAN_DAY_DEFAULT = 5;
 
-// ——— Quinzaines —————————————————————————————————————————————————
+// Quinzaines
 
 const parts = (iso) => iso.split('-').map(Number);
 
-/** Quinzaine (0–23) d'une date de l'année. */
+/** Quinzaine (0 a 23) d'une date de l'annee. */
 export function quinzaineOf(iso) {
   const [, m, d] = parts(iso);
   return (m - 1) * 2 + (d >= 16 ? 1 : 0);
@@ -43,16 +38,10 @@ function quinzaineEnd(year, q) {
 const isoOf = (year, month, day) => `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 const daysBetween = (a, b) => (Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY_MS;
 
-// ——— Simulation ————————————————————————————————————————————————
+// Simulation
 
 /**
- * Déroule le livret année par année, quinzaine par quinzaine.
- * @param {object} o
- * @param {number} o.startYear   année de départ (solde au 1er janvier = o.startBalance)
- * @param {Array}  o.flows       [{ date, amount }] montants signés en centimes (+ versement, − retrait)
- * @param {Array}  [o.plan]      [{ amount, day, after }] virements réguliers prévus chaque mois après la date `after`
- * @param {boolean} [o.exact]    false = calcul brut (sans arrondi ni plancher), pour la résolution
- * @param {number} [o.compoundFrom]  année à partir de laquelle on mesure les intérêts sur les intérêts
+ * Deroule le livret annee par annee, quinzaine par quinzaine.
  */
 function simulate({ product, rates, startYear, startBalance, endYear, flows, plan = [], exact = true, today = null, compoundFrom = null }) {
   const cap = PRODUCTS[product].cap;
@@ -64,15 +53,15 @@ function simulate({ product, rates, startYear, startBalance, endYear, flows, pla
   }
 
   const years = [];
-  const applied = []; // mouvements réellement passés sur le livret (versements prévus plafonnés compris)
+  const applied = [];
   let balance = startBalance;
-  let capitalized = 0; // intérêts versés depuis compoundFrom, qui rapportent à leur tour
+  let capitalized = 0;
 
   for (let year = startYear; year <= endYear; year++) {
     const start = balance;
     let interest = 0;
-    let yearRate = 0; // Σ taux/24 de l'année, en %
-    let earned = 0; // intérêts des quinzaines terminées (année en cours)
+    let yearRate = 0;
+    let earned = 0;
     let deposits = 0;
     let withdrawals = 0;
 
@@ -97,7 +86,6 @@ function simulate({ product, rates, startYear, startBalance, endYear, flows, pla
 
       for (const f of list) {
         let amount = f.amount;
-        // Plafond : un versement prévu est réduit à ce qui reste possible
         if (f.planned) amount = Math.min(amount, Math.max(0, cap - balance));
         if (amount === 0) continue;
         balance += amount;
@@ -107,14 +95,13 @@ function simulate({ product, rates, startYear, startBalance, endYear, flows, pla
     }
 
     if (exact) interest = Math.round(interest);
-    // Intérêts composés : la part des intérêts de l'année produite par les intérêts déjà versés
     const compound = compoundFrom != null && year >= compoundFrom ? Math.round(capitalized * yearRate / 100) : 0;
     balance += interest;
     if (compoundFrom != null && year >= compoundFrom) capitalized += interest;
     years.push({ year, start, interest, compound, earned: exact ? Math.round(earned) : earned, deposits, withdrawals, end: balance });
   }
 
-  /** Solde en fin de journée : intérêts compris le 31 décembre. */
+  /** Solde en fin de journee : interets compris le 31 decembre. */
   function balanceAt(iso) {
     const y = Number(iso.slice(0, 4));
     const entry = years.find((e) => e.year === y);
@@ -126,9 +113,8 @@ function simulate({ product, rates, startYear, startBalance, endYear, flows, pla
   return { years, applied, balanceAt };
 }
 
-// ——— Virements réguliers ————————————————————————————————————————
+// Virements reguliers
 
-// Virement permanent ou automatique, tel que les banques l'écrivent
 const REGULAR_HINT = /\b(VIR(EMENT)?\s+(PERM|PERMANENT|PERIODIQUE|AUTO|AUTOMATIQUE)|PERMANENT|AUTOMATIQUE|PERIODIQUE)\b/i;
 const templateKey = (f) => `${(f.label ?? '').toUpperCase().replace(/\d+/g, '').replace(/\s+/g, ' ').trim()}|${f.amount}`;
 
@@ -138,10 +124,7 @@ function shiftMonth(month, n) {
 }
 
 /**
- * Virements qui renflouent le livret chaque mois. Un virement est « régulier »
- * s'il est mensualisé, si son libellé dit « permanent » ou « automatique », ou
- * s'il revient au même montant au moins 2 mois sur les 3 derniers mois complets.
- * Il doit être encore actif (vu ce mois-ci ou le mois dernier).
+ * Virements qui renflouent le livret chaque mois.
  */
 export function regularTransfers(flows, today) {
   const month = today.slice(0, 7);
@@ -174,8 +157,8 @@ export function regularTransfers(flows, today) {
 }
 
 /**
- * Versements mensuels prévus : le montant réglé sur le livret s'il existe,
- * sinon la somme des virements réguliers repérés dans les relevés.
+ * Versements mensuels prevus : le montant regle sur le livret s'il existe,
+ * sinon la somme des virements reguliers reperes dans les releves.
  */
 export function monthlyPlan(livret, flows, today) {
   const items = regularTransfers(flows, today);
@@ -195,13 +178,7 @@ export function monthlyPlan(livret, flows, today) {
 }
 
 /**
- * Modèle complet d'un livret.
- * @param {object} livret   { product, anchor: { date, balance }, monthlyPlan }
- * @param {Array}  flows    mouvements des relevés [{ date, amount, recurring }]
- * @param {Array}  rates    barème fusionné (mergeRates)
- * @param {string} today    "YYYY-MM-DD"
- * @param {number} inflation  % sur un an
- * @param {number} horizon  nombre d'années projetées après l'année en cours
+ * Modele complet d'un livret.
  */
 export function buildLivretModel({ livret, flows, rates, today, inflation, horizon }) {
   const { product, anchor } = livret;
@@ -211,12 +188,10 @@ export function buildLivretModel({ livret, flows, rates, today, inflation, horiz
   const startYear = Math.min(anchorYear, Number(sorted[0]?.date.slice(0, 4) ?? anchorYear));
   const base = { product, rates, startYear, endYear: anchorYear, flows: sorted.filter((f) => f.date <= anchor.date), exact: false };
 
-  // Le solde au point connu est affine en le solde de départ : a·x + b
   const b = simulate({ ...base, startBalance: 0 }).balanceAt(anchor.date);
   const a = simulate({ ...base, startBalance: 1 }).balanceAt(anchor.date) - b;
   const startBalance = Math.round((anchor.balance - b) / a);
 
-  // Ce mois-ci, un virement régulier ne compte que s'il n'est pas déjà passé
   const plan = monthlyPlan(livret, sorted, today);
   const month = today.slice(0, 7);
   const schedule = plan.items.map((item) => {
@@ -238,7 +213,6 @@ export function buildLivretModel({ livret, flows, rates, today, inflation, horiz
   return {
     product,
     name: PRODUCTS[product].name,
-    // Les 12 prochains mois, au solde actuel : intérêts gagnés et hausse des prix sur la même somme
     next12: {
       interest: Math.round(balance * rate / 100),
       erosion: Math.round(balance * inflation / 100),
@@ -249,11 +223,10 @@ export function buildLivretModel({ livret, flows, rates, today, inflation, horiz
     capRoom: Math.max(0, PRODUCTS[product].cap - balance),
     rate,
     window: rateWindow(rates, product, today),
-    real, // rendement réel annuel, en fraction (−0,013 = −1,3 %)
+    real,
     interestYear: current?.interest ?? 0,
     interestEarned: current?.earned ?? 0,
     plan,
-    // Le solde reconstitué au 1er janvier est négatif : il manque des virements ou le solde saisi est faux
     inconsistent: startBalance < -100,
     startYear,
     years: run.years.filter((y) => y.year >= thisYear).map((y) => ({
@@ -267,21 +240,13 @@ export function buildLivretModel({ livret, flows, rates, today, inflation, horiz
   };
 }
 
-// ——— Virements des relevés —————————————————————————————————————
+// Virements des releves
 
-/** Mots du libellé d'un livret : ceux réglés, sinon ceux du produit. */
 export const livretKeywords = (livret) =>
   (livret.keywords?.length ? livret.keywords : PRODUCTS[livret.product].keywords).map(normalizeLabel).filter(Boolean);
 
 /**
- * Répartit les opérations d'épargne des relevés entre les livrets.
- * Un rattachement fait à la main (assign) l'emporte ; sinon, le livret du
- * même titulaire dont un mot apparaît dans le libellé (le plus long gagne).
- * Côté livret, une sortie du compte courant est un versement (+), une
- * rentrée un retrait (−).
- * @param {Array} transactions  opérations candidates (épargne + rattachées)
- * @param {Set}   savingsCategories  catégories de type « épargne »
- * @returns {{ byLivret: Map<string, Array>, unmatched: Array }}
+ * Repartit les operations d'epargne des releves entre les livrets.
  */
 export function matchFlows(transactions, livrets, assign, savingsCategories) {
   const byLivret = new Map(livrets.map((l) => [l.id, []]));
@@ -319,7 +284,7 @@ export function matchFlows(transactions, livrets, assign, savingsCategories) {
   return { byLivret, unmatched };
 }
 
-/** Additionne les livrets année par année et résume la situation face à l'inflation. */
+/** Additionne les livrets annee par annee et resume la situation face a l'inflation. */
 export function summarize(models, inflation) {
   const balance = models.reduce((s, m) => s + m.balance, 0);
   const yearly = models.reduce((s, m) => s + m.balance * m.rate / 100, 0);
@@ -337,7 +302,6 @@ export function summarize(models, inflation) {
     rate: balance > 0 ? (yearly / balance) * 100 : 0,
     yearlyInterest: Math.round(yearly),
     yearlyErosion: Math.round(erosion),
-    // Gain (ou perte) de pouvoir d'achat sur un an : intérêts − hausse des prix sur la même somme
     realGain: Math.round(yearly) - Math.round(erosion),
     years,
   };

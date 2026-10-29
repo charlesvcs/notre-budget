@@ -1,28 +1,28 @@
 /**
- * PEA : rendement des grands indices d'actions et fiscalité — données et fonctions pures.
+ * PEA : rendement des grands indices d'actions et fiscalite : donnees et fonctions pures.
  *
- *  - Performances annuelles en euros, dividendes réinvestis (indices « net return » ou
- *    « dividendes réinvestis »), hors frais d'ETF. Un PEA les suit via des ETF éligibles
- *    (réplication synthétique pour les indices mondiaux et américains).
- *  - Rendement moyen = taux annuel composé (moyenne géométrique) : ((Π (1 + r)) ^ (1/n)) − 1.
- *    La moyenne arithmétique des années, plus flatteuse, n'est pas ce qu'a gagné l'investisseur.
- *  - Fiscalité 2026 (LFSS 2026) : seuls les gains sont imposés, au retrait.
- *    Avant 5 ans : prélèvement forfaitaire de 31,4 % (12,8 % d'impôt + 18,6 % de prélèvements
- *    sociaux) et clôture du plan. Après 5 ans : 18,6 % de prélèvements sociaux seulement.
+ *  - Performances annuelles en euros, dividendes reinvestis (indices « net return » ou
+ *    « dividendes reinvestis »), hors frais d'ETF. Un PEA les suit via des ETF eligibles
+ *    (replication synthetique pour les indices mondiaux et americains).
+ *  - Rendement moyen = taux annuel compose (moyenne geometrique) : ((Π (1 + r)) ^ (1/n)) − 1.
+ *    La moyenne arithmetique des annees, plus flatteuse, n'est pas ce qu'a gagne l'investisseur.
+ *  - Fiscalite 2026 (LFSS 2026) : seuls les gains sont imposes, au retrait.
+ *    Avant 5 ans : prelevement forfaitaire de 31,4 % (12,8 % d'impot + 18,6 % de prelevements
+ *    sociaux) et cloture du plan. Apres 5 ans : 18,6 % de prelevements sociaux seulement.
  *
- * À rafraîchir chaque janvier : ajouter l'année écoulée à INDEX_RETURNS (fiches MSCI en EUR,
+ * A rafraichir chaque janvier : ajouter l'annee ecoulee a INDEX_RETURNS (fiches MSCI en EUR,
  * Euronext pour le CAC 40 GR) et l'inflation moyenne correspondante dans livret-rates.js.
  */
 import { TAX } from './livret-rates.js';
 
 export const PEA = {
   cap: 15_000_000, // plafond des versements, en centimes
-  years: 5, // durée de détention ouvrant l'exonération d'impôt sur le revenu
-  taxBefore: TAX.pfu, // retrait avant 5 ans : impôt + prélèvements sociaux, sur les gains
-  taxAfter: TAX.social, // retrait après 5 ans : prélèvements sociaux seuls, sur les gains
+  years: 5, // duree de detention ouvrant l'exoneration d'impot sur le revenu
+  taxBefore: TAX.pfu, // retrait avant 5 ans : impot + prelevements sociaux, sur les gains
+  taxAfter: TAX.social, // retrait apres 5 ans : prelevements sociaux seuls, sur les gains
 };
 
-/** Performances annuelles en %, en euros, dividendes réinvestis. */
+/** Performances annuelles en %, en euros, dividendes reinvestis. */
 export const INDEX_RETURNS = [
   {
     id: 'world',
@@ -56,10 +56,10 @@ export const INDEX_RETURNS = [
   },
 ];
 
-/** Années disponibles pour un indice, dans l'ordre. */
+/** Annees disponibles pour un indice, dans l'ordre. */
 export const yearsOf = (index) => Object.keys(index.returns).map(Number).sort((a, b) => a - b);
 
-/** Taux annuel composé (fraction) d'une suite de performances annuelles en %. */
+/** Taux annuel compose (fraction) d'une suite de performances annuelles en %. */
 export function annualized(returns) {
   if (!returns.length) return null;
   const growth = returns.reduce((g, r) => g * (1 + r / 100), 1);
@@ -67,8 +67,8 @@ export function annualized(returns) {
 }
 
 /**
- * Statistiques d'un indice sur ses `count` dernières années connues.
- * real : rendement composé après inflation française (moyenne annuelle de l'IPC).
+ * Statistiques d'un indice sur ses `count` dernieres annees connues.
+ * real : rendement compose apres inflation francaise (moyenne annuelle de l'IPC).
  */
 export function indexStats(index, count, inflation = {}) {
   const list = yearsOf(index).slice(-count);
@@ -91,12 +91,8 @@ export function indexStats(index, count, inflation = {}) {
 }
 
 /**
- * Ce que coûte l'imposition des gains au retrait, pour un placement à `rate` (fraction)
- * pendant `years` ans, imposé à `taxPct` % sur les gains seulement.
- *  - gainShare : part des gains dans la somme retirée ;
- *  - onWithdrawal : imposition moyenne de la somme retirée (taux × part des gains) ;
- *  - netRate : rendement annuel une fois l'imposition payée ;
- *  - drag : rendement perdu chaque année à cause de l'imposition (en points, fraction).
+ * Ce que coute l'imposition des gains au retrait, pour un placement a `rate` (fraction)
+ * pendant `years` ans, impose a `taxPct` % sur les gains seulement.
  */
 export function taxOnExit(rate, years, taxPct) {
   const growth = (1 + rate) ** years;
@@ -107,27 +103,27 @@ export function taxOnExit(rate, years, taxPct) {
   return { gainShare, onWithdrawal: gainShare * (taxPct / 100), netRate, drag: rate - netRate };
 }
 
-/** Taux d'imposition des gains d'un PEA selon son âge au moment du retrait. */
+/** Taux d'imposition des gains d'un PEA selon son age au moment du retrait. */
 export const peaTax = (years) => (years < PEA.years ? PEA.taxBefore : PEA.taxAfter);
 
-/** Valeur finale nette d'imposition d'une somme (centimes) placée `years` ans à `rate`. */
+/** Valeur finale nette d'imposition d'une somme (centimes) placee `years` ans a `rate`. */
 export function netValue(cents, rate, years, taxPct) {
   const gross = cents * (1 + rate) ** years;
   return Math.round(gross - Math.max(0, gross - cents) * (taxPct / 100));
 }
 
-/** Les indices « monde » de référence : moyenne de leurs rendements composés sur la période. */
+/** Les indices « monde » de reference : moyenne de leurs rendements composes sur la periode. */
 export function globalAverage(count, inflation = {}, list = INDEX_RETURNS) {
   const stats = list.filter((i) => i.global).map((i) => indexStats(i, count, inflation));
   const avg = (key) => stats.reduce((s, x) => s + x[key], 0) / stats.length;
   return { cagr: avg('cagr'), real: stats.every((s) => s.real != null) ? avg('real') : null, from: stats[0].from, to: stats[0].to, years: stats[0].years };
 }
 
-// ——— Votre PEA : lignes d'ETF et projection ————————————————————————————
+// Votre PEA : lignes d'ETF et projection
 
 /**
- * ETF éligibles au PEA les plus répandus. Frais courants (TER) en % par an, d'après les
- * émetteurs à l'automne 2026 : modifiables ligne par ligne, ils changent de temps en temps.
+ * ETF eligibles au PEA les plus repandus. Frais courants (TER) en % par an, d'apres les
+ * emetteurs a l'automne 2026 : modifiables ligne par ligne.
  */
 export const ETFS = [
   { id: 'dcam', ticker: 'DCAM', name: 'Amundi PEA Monde (MSCI World)', isin: 'FR001400U5Q4', index: 'world', ter: 0.2 },
@@ -141,14 +137,14 @@ export const OTHER_ETF = 'autre';
 export const etfById = new Map(ETFS.map((e) => [e.id, e]));
 export const indexById = new Map(INDEX_RETURNS.map((i) => [i.id, i]));
 
-/** Hypothèses de rendement des actions, avant frais des ETF. */
+/** Hypotheses de rendement des actions, avant frais des ETF. */
 export const SCENARIOS = [
   { id: 'passe', label: 'Passé 10 ans', text: 'le rendement moyen de vos indices sur les 10 dernières années' },
   { id: 'prudent', label: 'Prudent 5 %', rate: 5, text: '5 % par an, une hypothèse prudente pour les actions mondiales' },
   { id: 'pessimiste', label: 'Pessimiste 2 %', rate: 2, text: '2 % par an, à peine au-dessus de l\'inflation' },
 ];
 
-/** Une ligne enregistrée { etf, name?, index?, ter, amount } complétée par le catalogue. */
+/** Une ligne enregistree { etf, name?, index?, ter, amount } completee par le catalogue. */
 export function lineInfo(line) {
   const etf = etfById.get(line.etf);
   return {
@@ -163,7 +159,7 @@ export function lineInfo(line) {
 
 /**
  * Le portefeuille d'un PEA : valeur, poids de chaque ligne, frais moyens et rendement
- * passé des indices suivis (moyenne pondérée sur 10 ans, en fraction).
+ * passe des indices suivis (moyenne ponderee sur 10 ans, en fraction).
  */
 export function portfolio(account, inflation = {}) {
   const lines = (account.lines ?? []).map(lineInfo);
@@ -180,13 +176,13 @@ export function portfolio(account, inflation = {}) {
   };
 }
 
-/** Rendement annuel net de frais (fraction) retenu pour un scénario. */
+/** Rendement annuel net de frais (fraction) retenu pour un scenario. */
 export function scenarioRate(pf, scenarioId) {
   const scenario = SCENARIOS.find((s) => s.id === scenarioId) ?? SCENARIOS[0];
   return (scenario.rate == null ? pf.past : scenario.rate / 100) - pf.ter / 100;
 }
 
-/** Mois écoulés entre deux mois « YYYY-MM ». */
+/** Mois ecoules entre deux mois « YYYY-MM ». */
 export const monthsBetween = (from, to) => {
   const [y1, m1] = from.split('-').map(Number);
   const [y2, m2] = to.split('-').map(Number);
@@ -194,29 +190,49 @@ export const monthsBetween = (from, to) => {
 };
 
 /**
- * Projection mois par mois : versement en début de mois (jusqu'au plafond des versements),
- * puis croissance au taux mensuel équivalent. Un point par année écoulée.
- * À l'horizon : gains imposés selon l'âge du plan, valeur nette et en euros d'aujourd'hui.
+ * Projection mois par mois : versement en debut de mois (jusqu'au plafond des versements),
+ * puis croissance au taux mensuel equivalent. Un point complet par annee ecoulee (fiscalite,
+ * valeur nette et pouvoir d'achat en euros d'aujourd'hui calcules pour chaque annee).
  */
 export function projectPea({ value, deposits, monthly, rate, years, opened, start, inflation = 0 }) {
   const monthlyRate = (1 + rate) ** (1 / 12) - 1;
+  const baseMonths = opened && start ? monthsBetween(opened, start) : 0;
+
+  const makePoint = (y, val, dep) => {
+    const roundedVal = Math.round(val);
+    const gains = roundedVal - dep;
+    const age = (baseMonths + y * 12) / 12;
+    const taxRate = peaTax(age);
+    const tax = Math.round(Math.max(0, gains) * taxRate / 100);
+    const net = roundedVal - tax;
+    const deflator = (1 + inflation / 100) ** y;
+    return {
+      year: y,
+      value: roundedVal,
+      deposits: dep,
+      gains,
+      age,
+      taxRate,
+      tax,
+      net,
+      real: Math.round(roundedVal / deflator),
+      netReal: Math.round(net / deflator),
+      capped: dep >= PEA.cap,
+    };
+  };
+
   let v = value;
   let d = deposits;
-  const points = [{ year: 0, value: v, deposits: d, real: v }];
+  const points = [makePoint(0, v, d)];
   for (let k = 1; k <= years * 12; k++) {
     const add = Math.max(0, Math.min(monthly, PEA.cap - d));
     v = (v + add) * (1 + monthlyRate);
     d += add;
-    if (k % 12 === 0) points.push({ year: k / 12, value: Math.round(v), deposits: d, real: Math.round(v / (1 + inflation / 100) ** (k / 12)) });
+    if (k % 12 === 0) points.push(makePoint(k / 12, v, d));
   }
-  const end = points.at(-1);
-  const age = (monthsBetween(opened, start) + years * 12) / 12;
-  const taxRate = peaTax(age);
-  const gains = end.value - end.deposits;
-  const tax = Math.round(Math.max(0, gains) * taxRate / 100);
-  const net = end.value - tax;
+  const final = points.at(-1);
   return {
     points,
-    final: { ...end, gains, taxRate, tax, net, netReal: Math.round(net / (1 + inflation / 100) ** years), age, capped: end.deposits >= PEA.cap },
+    final,
   };
 }

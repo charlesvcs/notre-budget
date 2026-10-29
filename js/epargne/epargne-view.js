@@ -1,6 +1,6 @@
 /**
- * Écran « Épargne » : les livrets réglementés (Livret A, LEP). Solde estimé,
- * intérêts de l'année, plafond, rendement face à l'inflation et projection.
+ * Ecran « Epargne » : les livrets reglementes (Livret A, LEP). Solde estime,
+ * interets de l'annee, plafond, rendement face a l'inflation et projection.
  * Les calculs sont dans livret-model.js ; ce module lit la base et dessine.
  */
 import { PROFILES, STORES } from '../db/schema.js';
@@ -16,7 +16,7 @@ import {
 import { marketAssumptions } from './objectifs.js';
 import { SOURCES, isStale, refreshOfficialData } from './live-data.js';
 import { monthlyExpenses, realRate, safetyNet } from './indicators.js';
-import { buildEpargneWorkbook } from './export.js';
+import { buildEpargneWorkbook, buildFullWorkbook } from './export.js';
 import { download } from '../backup/backup-core.js';
 import { OFF_BUDGET_KINDS } from '../db/schema.js';
 import {
@@ -103,11 +103,11 @@ export function mountEpargneView(root = document) {
     horizon: 5,
     peaYears: 10,
     widgets: DEFAULT_WIDGETS,
-    widgetDraft: null, // ordre des widgets pendant « Personnaliser » (rien n'est enregistré avant « Valider »)
+    widgetDraft: null,
     expenses: null,
     safety: null,
-    setup: null, // 'premier' | 'ajout' | null
-    editing: null, // id du livret en cours de modification
+    setup: null,
+    editing: null,
     allRates: false,
     allUnmatched: false,
     animate: true,
@@ -122,7 +122,7 @@ export function mountEpargneView(root = document) {
   const isSolo = () => activeHolders().length <= 1 && sameHolders();
   const titleOf = (livret) => (sameHolders() ? PRODUCTS[livret.product].name : `${PRODUCTS[livret.product].name} · ${nameOf(livret.profile)}`);
 
-  // ——— Données ———————————————————————————————————————————————————
+  // Donnees
 
   async function load() {
     state.today = todayIso();
@@ -146,15 +146,19 @@ export function mountEpargneView(root = document) {
     state.assign = assign ?? {};
     state.earliest = earliest;
     state.savingsCategories = new Set(categories.filter((c) => c.kind === 'epargne').map((c) => c.id));
-    // Un tableau de bord enregistré reçoit les widgets apparus depuis (le PEA…), à la fin
     const added = widgets ? WIDGETS.map((w) => w.id).filter((id) => !(known ?? LEGACY_WIDGETS).includes(id)) : [];
-    state.widgets = [...(widgets ?? DEFAULT_WIDGETS), ...added].filter((id) => widgetById.has(id));
-    // Dépenses des titulaires des livrets, pour l'épargne de précaution
+    const rawOrder = [...(widgets ?? DEFAULT_WIDGETS), ...added].filter((id) => widgetById.has(id));
+    // Place la projection en tete si l'utilisateur avait l'ordre historique par defaut
+    if (rawOrder.join(',') === 'bulletin,matelas,gain-reel,comparateur,projection') {
+      state.widgets = DEFAULT_WIDGETS;
+    } else {
+      state.widgets = rawOrder;
+    }
+
     const holders = new Set(state.livrets.map((l) => l.profile));
     state.expenses = monthlyExpenses(recent, categories, holders, state.today.slice(0, 7));
     if (state.expenses && !state.expenses.average) state.expenses = null;
 
-    // Opérations d'épargne, plus celles rattachées à la main quelle que soit leur catégorie
     const byId = new Map();
     for (const id of state.savingsCategories) {
       for (const tx of await getByIndex(STORES.TRANSACTIONS, 'categoryId', id)) byId.set(tx.id, tx);
@@ -187,14 +191,14 @@ export function mountEpargneView(root = document) {
     render();
   }
 
-  /** Versements réguliers prévus sur l'ensemble des livrets (centimes par mois). */
+  /** Versements reguliers prevus sur l'ensemble des livrets (centimes par mois). */
   const plannedMonthly = () => state.models.reduce((sum, m) => sum + m.plan.monthly, 0);
 
   function render() {
     const has = state.livrets.length > 0;
     el.setup.hidden = !state.setup;
     el.add.hidden = !has || Boolean(state.setup);
-    el.exportBtn.hidden = !has;
+    el.exportBtn.hidden = false;
     for (const card of [el.hero, el.board, el.paramsCard]) card.hidden = !has;
     if (has) {
       renderHero();
@@ -206,15 +210,13 @@ export function mountEpargneView(root = document) {
     state.animate = false;
   }
 
-  // ——— Vue d'ensemble —————————————————————————————————————————————
+  // Vue d'ensemble
 
   function renderHero() {
     const { summary, models } = state;
     const inflation = state.inflation.rate;
     el.heroNote.textContent = `Inflation : ${pctOf(inflation)} sur un an (${state.inflation.source === 'saisie' ? 'saisie par vous' : 'INSEE'}, ${monthLong(state.inflation.month)})`;
 
-    // Un tableau à filets : une ligne par livret, le total entre liteaux.
-    // La colonne « face à l'inflation » garde la grammaire des longueurs : taux en indigo, inflation en trait.
     const scale = Math.max(inflation, ...models.map((m) => m.rate)) * 1.2 || 1;
     const mark = pct(inflation / scale);
     const cell = (tag, className, ...children) => h(tag, className, ...children);
@@ -257,7 +259,6 @@ export function mountEpargneView(root = document) {
 
     const next = models[0].window.next;
     const notes = [`Si taux et inflation restaient les mêmes pendant un an. Prochaine révision des taux le ${longDate(next)}.`];
-    // Conseil factuel : le LEP d'une personne rapporte plus que son Livret A et n'est pas plein
     const indexOf = (product, profile) => state.livrets.findIndex((l) => l.product === product && l.profile === profile);
     const lep = models.find((m, i) => m.product === 'lep' && m.capRoom > 0 && indexOf('livretA', state.livrets[i].profile) >= 0);
     const livretA = lep && models[indexOf('livretA', state.livrets[models.indexOf(lep)].profile)];
@@ -268,7 +269,7 @@ export function mountEpargneView(root = document) {
     renderHeroKpis();
   }
 
-  /** Repères sous le tableau : matelas de sécurité, dépenses mesurées, rendement des indices (PEA). */
+  /** Reperes sous le tableau : matelas de securite, depenses mesurees, rendement des indices (PEA). */
   function renderHeroKpis() {
     const { safety, expenses, summary } = state;
     const tile = (label, value, note) => h('div', 'sv-kpi', h('dt', null, label), h('dd', null, value), h('small', null, note));
@@ -281,18 +282,18 @@ export function mountEpargneView(root = document) {
           `${expenses.months.length} dernier${expenses.months.length > 1 ? 's' : ''} mois complet${expenses.months.length > 1 ? 's' : ''}, hors épargne`),
       );
     } else {
-      tiles.push(tile('Matelas de sécurité', h('span', 'sv-num', '—'), 'Importez un relevé complet pour mesurer vos dépenses'));
+      tiles.push(tile('Matelas de sécurité', h('span', 'sv-num', 'À calculer'), 'Importez un relevé complet pour mesurer vos dépenses'));
     }
     const global = globalAverage(10, state.ref.annual);
-    const more = h('a', null, 'onglet « Investir »');
+    const more = h('a', null, 'onglet « Investissement »');
     more.href = '#/investir';
     tiles.push(tile('Indices mondiaux (PEA)', h('span', 'sv-num', `${pct1(global.cagr)} / an`),
-      h('span', null, `moyenne ${global.from}–${global.to}, dividendes réinvestis ; votre PEA et vos objectifs dans l'`, more)));
+      h('span', null, `moyenne de ${global.from} à ${global.to}, dividendes réinvestis ; votre patrimoine et vos PEA dans l'`, more)));
     el.heroKpis.replaceChildren(...tiles);
     el.heroKpis.hidden = false;
   }
 
-  // ——— Cartes des livrets ————————————————————————————————————————
+  // Cartes des livrets
 
   function renderLivrets() {
     const year = state.today.slice(0, 4);
@@ -312,7 +313,6 @@ export function mountEpargneView(root = document) {
         ? 'solde saisi aujourd\'hui'
         : `estimé aujourd'hui · ${moneyExact(livret.anchor.balance)} saisis le ${longDate(livret.anchor.date)}`;
 
-      // Plafond : le rail se remplit avec le solde
       const full = m.capRoom === 0;
       q('.js-cap-text').textContent = full
         ? 'Plafond atteint : seuls les intérêts le font encore grandir'
@@ -328,7 +328,6 @@ export function mountEpargneView(root = document) {
       q('.js-interest-note').textContent = `versés le 31 décembre · ${money(m.interestEarned)} déjà acquis`;
       q('.js-real').replaceChildren(realBadge(m.real, ' / an'));
 
-      // Ce que rapportent les intérêts une fois la hausse des prix déduite
       const n = m.next12;
       q('.js-calc-interest-label').textContent = `Intérêts à ${pctOf(m.rate)}`;
       q('.js-calc-interest').textContent = signedMoney(n.interest);
@@ -339,7 +338,6 @@ export function mountEpargneView(root = document) {
         ? `Dans un an, vous aurez ${money(n.interest)} de plus sur ce livret, mais il faudra ${money(n.erosion)} de plus pour acheter ce que ${money(m.balance)} achètent aujourd'hui.`
         : `Dans un an, les ${money(n.interest)} d'intérêts couvrent la hausse des prix (${money(n.erosion)}) : le livret gagne en pouvoir d'achat.`;
       q('.js-plan').textContent = m.plan.monthly > 0 ? `${money(m.plan.monthly)} / mois` : 'Aucun';
-      // Les virements réguliers repérés, un par un : montant, jour, et pourquoi il est compté
       const items = m.plan.items.map((item) => `${money(item.amount)} le ${item.day} (${item.reason ?? item.label})`);
       q('.js-plan-note').textContent = {
         reglage: m.plan.monthly > 0 ? `le ${m.plan.day} du mois, réglé par vous` : 'réglé par vous',
@@ -386,11 +384,9 @@ export function mountEpargneView(root = document) {
       label.className = 'sv-move__label';
       label.textContent = f.label;
       if (f.manual) {
-        const badge = document.createElement('span');
-        badge.className = 'badge';
-        badge.dataset.kind = 'learned';
-        badge.textContent = 'rattaché';
-        label.append(' ', badge);
+        const note = document.createElement('small');
+        note.textContent = 'rattaché manuellement';
+        label.append(note);
       }
       const amount = document.createElement('span');
       amount.className = 'sv-move__amount';
@@ -474,7 +470,7 @@ export function mountEpargneView(root = document) {
     await load();
   }
 
-  // ——— Virements à rattacher ——————————————————————————————————————
+  // Virements a rattacher
 
   function renderUnmatched() {
     const list = state.livrets.length ? state.unmatched : [];
@@ -534,7 +530,7 @@ export function mountEpargneView(root = document) {
     el.unmatched.replaceChildren(...items);
   }
 
-  /** Rattache (ou détache) une opération, avec possibilité d'annuler. */
+  /** Rattache (ou detache) une operation, avec possibilite d'annuler. */
   async function assignTo(txId, target, message) {
     const previous = state.assign[txId];
     const write = async (value) => {
@@ -547,7 +543,7 @@ export function mountEpargneView(root = document) {
     showNotice(message, () => write(previous));
   }
 
-  // ——— Tableau de bord (widgets) ——————————————————————————————————
+  // Tableau de bord (widgets)
 
   const widgetContext = () => ({
     models: state.models,
@@ -649,9 +645,9 @@ export function mountEpargneView(root = document) {
     el.widgets.children[index + delta]?.querySelector('.link-btn:not(:disabled)')?.focus();
   }
 
-  // ——— Export Excel —————————————————————————————————————————————————
+  // Export Excel
 
-  /** Dépenses des titulaires sur les 12 derniers mois, par catégorie (feuille « Dépenses par mois »). */
+  /** Depenses des titulaires sur les 12 derniers mois, par categorie (feuille « Depenses par mois »). */
   async function spendingByMonth() {
     const months = Array.from({ length: 12 }, (_, i) => addMonths(state.today.slice(0, 7), -11 + i));
     const [categories, lists] = await Promise.all([getCategories({ includeArchived: true }), Promise.all(months.map(getTransactionsByMonth))]);
@@ -677,25 +673,23 @@ export function mountEpargneView(root = document) {
     el.exportBtn.disabled = true;
     el.exportBtn.textContent = 'Préparation…';
     try {
-      const projection = state.livrets.map((livret) => buildLivretModel({
-        livret, flows: state.flows.get(livret.id) ?? [], rates: state.rates, today: state.today, inflation: state.inflation.rate, horizon: 10,
-      }));
-      const [peaAccounts, goals] = await Promise.all([getSetting('peaAccounts'), getSetting('objectifs')]);
-      const market = marketAssumptions({
-        accounts: peaAccounts ?? [], annual: state.ref.annual, livretA: rateOn(state.rates, 'livretA', state.today) / 100, month: state.today.slice(0, 7),
+      const workbook = await buildFullWorkbook({
+        today: state.today,
+        names: state.profileNames,
+        inflation: state.inflation,
+        ref: state.ref,
+        rates: state.rates,
       });
-      const ctx = { ...widgetContext(), names: state.profileNames, pea: peaAccounts ?? [], goals: goals ?? [], market };
-      const workbook = buildEpargneWorkbook(ctx, { flows: state.flows, projection, spending: await spendingByMonth() });
-      download(new File([workbook.toBlob()], `mon-budget-epargne-${state.today}.xlsx`, {
+      download(new File([workbook.toBlob()], `notre-budget-bilan-complet-${state.today}.xlsx`, {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       }));
-      showNotice('Classeur Excel prêt : il est dans vos téléchargements.');
+      showNotice('Classeur Excel complet prêt : il est dans vos téléchargements.');
     } catch (err) {
       console.error('[export] Échec :', err);
       showNotice('L\'export n\'a pas abouti. Réessayez, ou rechargez la page.');
     } finally {
       el.exportBtn.disabled = false;
-      el.exportBtn.textContent = 'Exporter en Excel';
+      el.exportBtn.textContent = 'Exporter le bilan Excel';
     }
   });
 
@@ -720,9 +714,7 @@ export function mountEpargneView(root = document) {
     showNotice('Tableau de bord enregistré.');
   });
 
-  // ——— Taux et inflation ——————————————————————————————————————————
-
-  // ——— Données publiques mises à jour automatiquement ———————————————
+  // Taux et inflation
 
   async function refreshPublicData() {
     state.refreshing = true;
@@ -748,16 +740,16 @@ export function mountEpargneView(root = document) {
     el.liveStatus.textContent = state.refreshing
       ? 'Lecture des sources officielles…'
       : o?.fetchedAt
-        ? `Mis à jour le ${dateTime.format(new Date(o.fetchedAt))}. L'app lit seulement ces séries publiques : aucune de vos données n'est envoyée.`
+        ? `Mis à jour le ${dateTime.format(new Date(o.fetchedAt))}. L'application lit seulement ces séries publiques : aucune de vos données n'est envoyée.`
         : state.auto
-          ? 'Pas encore mis à jour : les valeurs livrées avec l\'app sont utilisées en attendant.'
-          : 'Mise à jour automatique désactivée : les valeurs livrées avec l\'app ou saisies par vous sont utilisées.';
+          ? 'Pas encore mis à jour : les valeurs livrées avec l\'application sont utilisées en attendant.'
+          : 'Mise à jour automatique désactivée : les valeurs livrées avec l\'application ou saisies par vous sont utilisées.';
 
     const row = (label, value, source, error) => {
       const li = h('li', 'sv-live__item', h('span', 'sv-live__label', label));
       const val = h('span', 'sv-live__value', error ? 'indisponible' : value);
       if (error) val.title = error;
-      const src = source ? h('a', 'sv-live__source', source.name) : h('span', 'sv-live__source', '—');
+      const src = source ? h('a', 'sv-live__source', source.name) : h('span', 'sv-live__source', 'En attente');
       if (source) { src.href = source.url; src.target = '_blank'; src.rel = 'noopener noreferrer'; }
       li.append(val, src);
       if (error) li.append(h('small', 'sv-live__error', `${error} : dernières valeurs connues conservées.`));
@@ -771,9 +763,9 @@ export function mountEpargneView(root = document) {
     const a = latestRate('livretA');
     const l = latestRate('lep');
     el.liveList.replaceChildren(
-      row('Inflation sur un an (IPC)', insee ? `${pctOf(insee.inflation.rate)} · ${monthLong(insee.inflation.month)}` : '—', insee ? SOURCES.insee : null, errors.insee),
-      row('IPCH · sous-jacente', insee ? `${pctOf(insee.indices.ipch)} · ${pctOf(insee.indices.core)}` : '—', insee ? SOURCES.insee : null, errors.insee),
-      row('Taux du marché monétaire (€STR)', estr ? `${estr.rate.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} % · ${longDate(estr.date)}` : '—', estr ? SOURCES.bce : null, errors.bce),
+      row('Inflation sur un an (IPC)', insee ? `${pctOf(insee.inflation.rate)} · ${monthLong(insee.inflation.month)}` : 'Non disponible', insee ? SOURCES.insee : null, errors.insee),
+      row('IPCH · sous-jacente', insee ? `${pctOf(insee.indices.ipch)} · ${pctOf(insee.indices.core)}` : 'Non disponible', insee ? SOURCES.insee : null, errors.insee),
+      row('Taux du marché monétaire (€STR)', estr ? `${estr.rate.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} % · ${longDate(estr.date)}` : 'Non disponible', estr ? SOURCES.bce : null, errors.bce),
       row('Livret A · LEP', `${pctOf(a?.livretA ?? 0)} · ${pctOf(l?.lep ?? 0)}${liv ? ` (depuis le ${longDate(a.from > l.from ? a.from : l.from)})` : ''}`,
         liv ? SOURCES[liv.source] : null, errors.livrets),
     );
@@ -810,7 +802,7 @@ export function mountEpargneView(root = document) {
       const cells = ['livretA', 'lep'].map((p) => {
         const td = document.createElement('td');
         td.className = 'num';
-        td.textContent = r[p] == null ? '—' : pctOf(r[p]);
+        td.textContent = r[p] == null ? 'Inchangé' : pctOf(r[p]);
         return td;
       });
       const origin = document.createElement('td');
@@ -887,7 +879,7 @@ export function mountEpargneView(root = document) {
     await load();
   });
 
-  // ——— Premier lancement / ajout d'un livret ——————————————————————
+  // Premier lancement / ajout d'un livret
 
   function openSetup(mode, focus = true) {
     state.setup = mode;
@@ -962,7 +954,7 @@ export function mountEpargneView(root = document) {
     }
   });
 
-  // ——— Outils ————————————————————————————————————————————————————
+  // Outils
 
   function fillHolders(select, value) {
     const holders = activeHolders();
@@ -989,13 +981,12 @@ export function mountEpargneView(root = document) {
     async show() {
       state.animate = true;
       await load();
-      // Données publiques : une mise à jour par ouverture de l'écran au plus, si elles datent de plus de 12 h
       if (state.auto && isStale(state.official) && !state.refreshing) refreshPublicData();
     },
   };
 }
 
-// ——— Utilitaires ————————————————————————————————————————————————
+// Utilitaires
 
 function todayIso() {
   const d = new Date();

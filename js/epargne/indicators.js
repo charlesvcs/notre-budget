@@ -1,11 +1,11 @@
 /**
- * Indicateurs pour juger un placement — fonctions pures.
+ * Indicateurs pour juger un placement (fonctions pures).
  *
  *  - Rendement réel (relation de Fisher) : (1 + taux) / (1 + inflation) − 1.
  *    C'est ce que gagne (ou perd) votre pouvoir d'achat chaque année.
  *  - Équivalent brut : ce qu'un placement imposé devrait rapporter avant impôts
  *    pour égaler un livret net d'impôt (taux net ÷ (1 − taux d'imposition)).
- *  - Temps de doublement : ln 2 ÷ ln(1 + taux) — la « règle de 72 » (72 ÷ taux en %)
+ *  - Temps de doublement : ln 2 ÷ ln(1 + taux), la « règle de 72 » (72 ÷ taux en %)
  *    en est l'approximation de tête. Si le rendement réel est négatif, on calcule à
  *    l'inverse le temps pour que le pouvoir d'achat soit divisé par deux.
  *  - Épargne de précaution (matelas de sécurité) : solde des livrets ÷ dépenses mensuelles

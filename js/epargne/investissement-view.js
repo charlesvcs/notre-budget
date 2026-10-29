@@ -1,25 +1,27 @@
 /**
- * Onglet « Investir » : vos portefeuilles (PEA), vos objectifs, et chaque objectif confronté
- * aux stratégies d'investissement (livrets, prudente, équilibrée, dynamique). Repères :
- * rendement des indices et fiscalité du PEA. Les calculs sont dans objectifs.js et pea.js.
+ * Onglet « Investir » : vue d'ensemble du patrimoine global (livrets + PEA),
+ * portefeuilles PEA, objectifs et confrontation aux strategies d'investissement.
  */
-import { PROFILES } from '../db/schema.js';
+import { PROFILES, STORES } from '../db/schema.js';
 import {
-  getActiveProfiles, getProfileNames, getSetting, setSetting, toCents,
+  getActiveProfiles, getById, getByIndex, getCategories, getLivrets, getProfileNames, getSetting, setSetting, toCents,
 } from '../db/database.js';
-import { currentInflation, mergeRates, rateOn, referenceData } from './livret-rates.js';
-import { PEA, portfolio } from './pea.js';
+import { PRODUCTS, currentInflation, mergeRates, rateOn, referenceData } from './livret-rates.js';
+import { buildLivretModel, matchFlows, summarize } from './livret-model.js';
+import { PEA, monthsBetween, portfolio, projectPea, scenarioRate } from './pea.js';
 import {
   CRASH, EQUITY_CHOICES, confront, marketAssumptions,
 } from './objectifs.js';
 import { mountPeaSection } from './pea-view.js';
-import { buildInvestWorkbook } from './export.js';
+import { buildFullWorkbook, buildInvestWorkbook } from './export.js';
 import { download } from '../backup/backup-core.js';
 import { peaWidget, verdictTag } from './widgets.js';
-import { gainBadge, h, money, monthLong, pct1, pctOf, setWidths } from './format.js';
+import { gainBadge, h, money, monthLong, pct, pct1, pctOf, setWidths } from './format.js';
 
 const HOLDERS = [PROFILES.ME, PROFILES.PARTNER];
+const PATRIMOINE_MILESTONES = [0, 5, 10, 15, 20];
 const decimal = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+
 export function mountInvestissementView(root = document) {
   const $ = (id) => root.getElementById(id);
   const el = {
@@ -28,6 +30,7 @@ export function mountInvestissementView(root = document) {
     noticeText: $('inv-notice-text'),
     undo: $('inv-undo'),
     kpis: $('inv-kpis'),
+    patrimoine: $('inv-patrimoine'),
     peaEmpty: $('inv-pea-empty'),
     peaEmptyAdd: $('inv-pea-empty-add'),
     goals: $('inv-goals'),
@@ -43,6 +46,10 @@ export function mountInvestissementView(root = document) {
   const state = {
     today: '',
     goals: [],
+    livrets: [],
+    livretModels: [],
+    livretSummary: null,
+    rates: [],
     editing: null, // id de l'objectif en cours de modification, ou 'nouveau'
     equity: 'prudent',
     peaYears: 10,
@@ -56,7 +63,11 @@ export function mountInvestissementView(root = document) {
 
   const nameOf = (p) => state.names[p] ?? p;
   const holders = () => {
-    const set = new Set([...state.active.filter((p) => HOLDERS.includes(p)), ...pea.accounts().map((a) => a.profile)]);
+    const set = new Set([
+      ...state.active.filter((p) => HOLDERS.includes(p)),
+      ...pea.accounts().map((a) => a.profile),
+      ...state.livrets.map((l) => l.profile),
+    ]);
     return HOLDERS.filter((p) => set.has(p));
   };
 
@@ -64,22 +75,48 @@ export function mountInvestissementView(root = document) {
     container: $('inv-pea'),
     addButton: $('inv-pea-add'),
     notify: (text, undo) => showNotice(text, undo),
-    onChange: () => { renderPeaEmpty(); renderKpis(); renderGoals(); },
+    onChange: () => { renderPeaEmpty(); renderKpis(); renderPatrimoine(); renderGoals(); },
   });
   el.peaEmptyAdd.addEventListener('click', () => $('inv-pea-add').click());
 
   async function load() {
     state.today = todayIso();
-    const [names, active, goals, inflation, official, userRates] = await Promise.all([
+    const [names, active, goals, inflation, official, userRates, livrets, categories, assign] = await Promise.all([
       getProfileNames(), getActiveProfiles(), getSetting('objectifs'), getSetting('inflation'), getSetting('donneesOfficielles'),
-      getSetting('livretRates'), pea.load(),
+      getSetting('livretRates'), getLivrets(), getCategories({ includeArchived: true }), getSetting('livretAssign'), pea.load(),
     ]);
     state.names = names ?? {};
     state.active = active;
     state.goals = goals ?? [];
     state.inflation = currentInflation(inflation, official);
     state.ref = referenceData(official);
-    state.livretA = rateOn(mergeRates(userRates ?? [], official?.livrets?.rates ?? []), 'livretA', state.today) / 100;
+    state.rates = mergeRates(userRates ?? [], official?.livrets?.rates ?? []);
+    state.livretA = rateOn(state.rates, 'livretA', state.today) / 100;
+
+    // Chargement des livrets pour offrir la vision globale du patrimoine
+    state.livrets = (livrets ?? []).sort((a, b) => HOLDERS.indexOf(a.profile) - HOLDERS.indexOf(b.profile)
+      || Object.keys(PRODUCTS).indexOf(a.product) - Object.keys(PRODUCTS).indexOf(b.product));
+    const savingsCats = new Set(categories.filter((c) => c.kind === 'epargne').map((c) => c.id));
+    const assignMap = assign ?? {};
+    const byId = new Map();
+    for (const id of savingsCats) {
+      for (const tx of await getByIndex(STORES.TRANSACTIONS, 'categoryId', id)) byId.set(tx.id, tx);
+    }
+    for (const id of Object.keys(assignMap)) {
+      if (byId.has(id)) continue;
+      const tx = await getById(STORES.TRANSACTIONS, id);
+      if (tx) byId.set(id, tx);
+    }
+    const { byLivret } = matchFlows([...byId.values()], state.livrets, assignMap, savingsCats);
+    state.livretModels = state.livrets.map((livret) => buildLivretModel({
+      livret,
+      flows: byLivret.get(livret.id) ?? [],
+      rates: state.rates,
+      today: state.today,
+      inflation: state.inflation.rate,
+      horizon: 20,
+    }));
+    state.livretSummary = summarize(state.livretModels, state.inflation.rate);
     render();
   }
 
@@ -90,6 +127,7 @@ export function mountInvestissementView(root = document) {
     });
     renderPeaEmpty();
     renderKpis();
+    renderPatrimoine();
     renderMarket();
     renderGoals();
     renderReference();
@@ -100,7 +138,166 @@ export function mountInvestissementView(root = document) {
     el.peaEmpty.hidden = pea.accounts().length > 0 || !$('inv-pea').hidden;
   }
 
-  // ——— Hypothèses de marché ————————————————————————————————————————————
+  // Calcul du patrimoine global et de sa projection a 20 ans
+  function computeGlobalPatrimoine() {
+    const startMonth = state.today.slice(0, 7);
+    const livretNow = state.livretSummary?.balance ?? 0;
+    const livretMonthly = state.livretModels.reduce((s, m) => s + m.plan.monthly, 0);
+    const livretYears = state.livretSummary?.years ?? [];
+
+    // Projections de chaque PEA sur 20 ans (selon son simulateur ou l'hypothese active)
+    const peaAccounts = pea.accounts();
+    const peaRuns = peaAccounts.map((acc) => {
+      const pf = portfolio(acc, state.ref.annual);
+      const sim = pea.simOf(acc.id);
+      const monthly = sim ? sim.monthly : (acc.monthly ?? 0);
+      const scenId = sim ? sim.scenario : state.equity;
+      const rate = scenarioRate(pf, scenId);
+      const proj = projectPea({
+        value: pf.value,
+        deposits: pf.deposits,
+        monthly,
+        rate,
+        years: 20,
+        opened: acc.opened,
+        start: startMonth,
+        inflation: state.inflation.rate,
+      });
+      return { acc, pf, monthly, rate, proj };
+    });
+
+    const peaGrossNow = peaRuns.reduce((s, r) => s + r.pf.value, 0);
+    const peaNetNow = peaRuns.reduce((s, r) => s + r.proj.points[0].net, 0);
+    const peaDepositsNow = peaRuns.reduce((s, r) => s + r.pf.deposits, 0);
+    const peaLatentNow = peaRuns.reduce((s, r) => s + (r.pf.value - r.pf.deposits), 0);
+    const peaNetGainsNow = peaRuns.reduce((s, r) => s + (r.proj.points[0].net - r.pf.deposits), 0);
+    const peaMonthly = peaRuns.reduce((s, r) => s + r.monthly, 0);
+
+    const rows = PATRIMOINE_MILESTONES.map((yr) => {
+      const livretVal = yr === 0
+        ? livretNow
+        : (livretYears[yr]?.end ?? livretYears.at(-1)?.end ?? livretNow);
+      const livretInterest = yr === 0
+        ? 0
+        : (livretYears[yr]?.cumulated ?? Math.max(0, livretVal - (livretNow + livretMonthly * 12 * yr)));
+      const livretDeposits = Math.max(0, livretVal - livretInterest);
+      const peaGross = peaRuns.reduce((s, r) => s + (r.proj.points[yr]?.value ?? 0), 0);
+      const peaNet = peaRuns.reduce((s, r) => s + (r.proj.points[yr]?.net ?? 0), 0);
+      const peaDeposits = peaRuns.reduce((s, r) => s + (r.proj.points[yr]?.deposits ?? 0), 0);
+      const peaGainsNet = peaNet - peaDeposits;
+      const totalDeposits = livretDeposits + peaDeposits;
+      const totalGainsNet = livretInterest + peaGainsNet;
+      const totalGross = livretVal + peaGross;
+      const totalNet = livretVal + peaNet;
+      const deflator = (1 + state.inflation.rate / 100) ** yr;
+      const totalReal = Math.round(totalNet / deflator);
+      const rente4Pct = Math.round(totalNet * 0.04 / 12);
+      return {
+        year: yr,
+        livretVal,
+        livretDeposits,
+        livretInterest,
+        peaGross,
+        peaNet,
+        peaDeposits,
+        peaGainsNet,
+        totalGross,
+        totalNet,
+        totalReal,
+        totalDeposits,
+        totalGainsNet,
+        rente4Pct,
+      };
+    });
+
+    return {
+      livretNow,
+      livretMonthly,
+      peaGrossNow,
+      peaNetNow,
+      peaDepositsNow,
+      peaLatentNow,
+      peaNetGainsNow,
+      peaMonthly,
+      totalDepositsNow: livretNow + peaDepositsNow,
+      totalGainsNetNow: peaNetGainsNow,
+      totalGrossNow: livretNow + peaGrossNow,
+      totalNetNow: livretNow + peaNetNow,
+      totalMonthly: livretMonthly + peaMonthly,
+      rows,
+    };
+  }
+
+  // Synthese et projection du patrimoine global
+  function renderPatrimoine() {
+    if (!el.patrimoine) return;
+    const pat = computeGlobalPatrimoine();
+    const hasAny = state.livrets.length > 0 || pea.accounts().length > 0;
+    el.patrimoine.hidden = !hasAny;
+    if (!hasAny) return;
+
+    const total = Math.max(1, pat.totalGrossNow);
+    const livretShare = pat.livretNow / total;
+    const peaShare = pat.peaGrossNow / total;
+    const baseYear = Number(state.today.slice(0, 4));
+
+    const segLivret = h('span', 'patrimoine-bar__seg patrimoine-bar__seg--livrets');
+    const segPea = h('span', 'patrimoine-bar__seg patrimoine-bar__seg--pea');
+    segLivret.style.setProperty('--w', pct(livretShare));
+    segPea.style.setProperty('--w', pct(peaShare));
+
+    const bar = h('div', 'patrimoine-bar', segLivret, segPea);
+    const legend = h('p', 'sv-legend',
+      h('span', null, h('i', 'key key--contrib'), `Épargne sécurisée (Livrets) : ${money(pat.livretNow)} (${pct1(livretShare)}) · +${money(pat.livretMonthly)} / mois`),
+      h('span', null, h('i', 'key key--today'), `Actions (PEA brut) : ${money(pat.peaGrossNow)} (${pct1(peaShare)}) · +${money(pat.peaMonthly)} / mois`),
+      h('span', null, h('i', 'key key--gain'), `Dont plus-values & intérêts composés actuels : ${money(pat.peaLatentNow)} bruts (${money(pat.peaNetGainsNow)} nets)`),
+    );
+    legend.querySelectorAll('i').forEach((i) => i.setAttribute('aria-hidden', 'true'));
+
+    const table = h('table', 'sv-table sv-table--compact sv-table--pea');
+    table.append(
+      h('caption', 'visually-hidden', 'Projection du patrimoine global sur 20 ans'),
+      h('thead', null, h('tr', null,
+        h('th', null, 'Horizon'),
+        h('th', 'num', 'Fonds investis cumulés'),
+        h('th', 'num', 'Intérêts composés nets'),
+        h('th', 'num', 'Livrets réglementés'),
+        h('th', 'num', 'PEA (net d\'impôt)'),
+        h('th', 'num', 'Patrimoine net total'),
+        h('th', 'num', 'En € d\'aujourd\'hui'),
+        h('th', 'num', 'Rente 4 % / mois'))),
+    );
+    table.append(h('tbody', null, ...pat.rows.map((r) => {
+      const label = r.year === 0 ? `Aujourd'hui (${baseYear})` : `Dans ${r.year} ans (${baseYear + r.year})`;
+      const th = h('th', null, r.year === 0 || r.year === 10 || r.year === 20 ? h('strong', null, label) : label);
+      th.scope = 'row';
+      const gainShare = r.totalNet > 0 && r.totalGainsNet > 0 ? r.totalGainsNet / r.totalNet : 0;
+      return h('tr', r.year === 10 ? 'is-selected' : null,
+        th,
+        h('td', 'num', money(r.totalDeposits)),
+        h('td', 'num', h('span', null, gainBadge(r.totalGainsNet), gainShare > 0 ? ` (${pct1(gainShare)})` : '')),
+        h('td', 'num', money(r.livretVal)),
+        h('td', 'num', money(r.peaNet)),
+        h('td', 'num', h('strong', null, money(r.totalNet))),
+        h('td', 'num', money(r.totalReal)),
+        h('td', 'num', `${money(r.rente4Pct)} / mois`),
+      );
+    })));
+
+    el.patrimoine.replaceChildren(
+      h('header', 'card__head card__head--row',
+        h('div', null,
+          h('h2', null, 'Étendue et projection du patrimoine global'),
+          h('p', 'card__hint', `Synthèse consolidée de vos ${state.livrets.length} livret${state.livrets.length > 1 ? 's' : ''} et ${pea.accounts().length} PEA, avec distinction directe entre fonds investis et intérêts composés nets.`)),
+      ),
+      bar,
+      legend,
+      h('div', 'sv-table__wrap', table),
+      h('p', 'card__hint', `La colonne « Rente 4 % / mois » indique le revenu mensuel soutenable à long terme selon la règle patrimoniale des 4 % par an sur le patrimoine net. Pouvoir d'achat calculé avec ${pctOf(state.inflation.rate)} d'inflation annuelle.`),
+    );
+  }
+
+  // Hypotheses de marche
 
   const market = () => marketAssumptions({
     accounts: pea.accounts(), annual: state.ref.annual, equity: state.equity, livretA: state.livretA, month: state.today.slice(0, 7),
@@ -114,33 +311,36 @@ export function mountInvestissementView(root = document) {
       Object.assign(input, { type: 'radio', name: 'inv-equity', value: c.id, checked: c.id === state.equity });
       field.append(h('label', null, input, h('span', null, c.label)));
     }
-    field.addEventListener('change', (e) => { state.equity = e.target.value; renderMarket(); renderKpis(); renderGoals(); });
+    field.addEventListener('change', (e) => { state.equity = e.target.value; renderMarket(); renderKpis(); renderPatrimoine(); renderGoals(); });
     el.market.replaceChildren(field);
     const m = market();
     const choice = EQUITY_CHOICES.find((c) => c.id === state.equity);
     el.marketNote.textContent = `Actions : ${choice.text} (${pct1(m.gross)}), moins ${pctOf(Math.round(m.ter * 100) / 100)} de frais d'ETF${m.hasPea ? ' (ceux de vos PEA)' : ''}, soit ${pct1(m.equityRate)} par an. Livrets : ${pctOf(m.safeRate * 100)}, le taux actuel du Livret A. Gains des actions imposés au retrait comme dans un PEA (${pctOf(PEA.taxAfter)} après ${PEA.years} ans${m.hasPea ? ', votre PEA ayant déjà ' + Math.floor(m.peaAge / 12) + ' an' + (m.peaAge >= 24 ? 's' : '') : ', PEA ouvert aujourd\'hui'}).`;
   }
 
-  // ——— Vue d'ensemble ——————————————————————————————————————————————————
+  // Vue d'ensemble (KPIs)
 
   function renderKpis() {
     const tile = (label, value, note) => h('div', 'sv-kpi', h('dt', null, label), h('dd', null, value), h('small', null, note));
+    const pat = computeGlobalPatrimoine();
     const pfs = pea.accounts().map((a) => portfolio(a, state.ref.annual));
-    const value = pfs.reduce((s, p) => s + p.value, 0);
-    const latent = pfs.reduce((s, p) => s + p.value - p.deposits, 0);
-    const monthly = pea.accounts().reduce((s, a) => s + (a.monthly ?? 0), 0);
+    const in10Years = pat.rows.find((r) => r.year === 10) ?? pat.rows[0];
     const m = market();
     const results = state.goals.map((g) => confront(g, m, state.today.slice(0, 7)));
     const ok = results.filter((r) => r.rows.find((row) => row.suggested).reached).length;
+
     el.kpis.replaceChildren(
-      tile('Portefeuilles', h('span', 'sv-num', money(value)),
-        pfs.length ? h('span', null, 'plus-value latente ', gainBadge(latent)) : 'aucun PEA saisi pour l\'instant'),
-      tile('Versements mensuels', h('span', 'sv-num', `${money(monthly)} / mois`), pfs.length ? 'prévus sur vos PEA' : 'à indiquer avec votre PEA'),
-      tile('Objectifs', h('span', 'sv-num', state.goals.length ? `${ok} sur ${state.goals.length}` : '—'),
-        state.goals.length ? 'atteints avec la stratégie conseillée pour leur échéance, aux versements prévus' : 'ajoutez un objectif pour le confronter aux stratégies'));
+      tile('Patrimoine net actuel', h('span', 'sv-num', money(pat.totalNetNow)),
+        `${money(pat.livretNow)} sur livrets · ${money(pat.peaNetNow)} sur PEA net`),
+      tile('Portefeuilles PEA', h('span', 'sv-num', money(pat.peaGrossNow)),
+        pfs.length ? h('span', null, 'plus-value latente ', gainBadge(pat.peaLatentNow)) : 'aucun PEA saisi pour l\'instant'),
+      tile('Effort d\'épargne total', h('span', 'sv-num', `${money(pat.totalMonthly)} / mois`),
+        `${money(pat.livretMonthly)} livrets + ${money(pat.peaMonthly)} PEA`),
+      tile('Patrimoine projeté à 10 ans', h('span', 'sv-num', money(in10Years.totalNet)),
+        `${money(in10Years.totalReal)} en euros d'aujourd'hui${state.goals.length ? ` · ${ok}/${state.goals.length} objectifs atteints` : ''}`));
   }
 
-  // ——— Objectifs ———————————————————————————————————————————————————————
+  // Objectifs
 
   function renderGoals() {
     const m = market();
@@ -172,14 +372,12 @@ export function mountInvestissementView(root = document) {
       h('div', null, h('h2', null, goal.name), h('p', 'card__hint', `En ${monthLong(goal.deadline)}, ${remaining}`)),
       h('p', 'sv-livret__rate', h('strong', null, money(goal.target)), h('small', null, 'montant visé')));
 
-    // Où en est l'objectif
     const fill = h('span', 'meter__fill');
     const progress = h('div', 'sv-cap', h('div', 'meter', fill),
       h('p', 'env__line', h('span', null, `${money(goal.saved)} déjà mis de côté · ${money(goal.monthly)} par mois`),
         h('span', 'env__figures', h('strong', null, pct1(Math.min(1, goal.saved / goal.target))), ' de l\'objectif')));
     setWidths([[fill, goal.saved / goal.target]], state.animate);
 
-    // Chaque stratégie face à l'objectif
     const table = h('table', 'sv-table sv-table--compact sv-table--pea');
     table.append(h('caption', 'visually-hidden', `${goal.name} : stratégies comparées`),
       h('thead', null, h('tr', null, h('th', null, 'Stratégie'), h('th', 'num', 'Net à l\'échéance'), h('th', 'num', 'Écart'),
@@ -188,12 +386,11 @@ export function mountInvestissementView(root = document) {
       const th = h('th', null, h('strong', null, r.strategy.name), r.suggested ? ' ' : null,
         r.suggested ? verdictTag('ok', 'conseillée') : null, h('small', null, r.strategy.text));
       th.scope = 'row';
-      const needed = r.needed === 0 ? 'déjà atteint' : r.needed == null ? '—' : `${money(r.needed)} / mois`;
+      const needed = r.needed === 0 ? 'déjà atteint' : r.needed == null ? 'Hors plafond' : `${money(r.needed)} / mois`;
       return h('tr', r.suggested ? 'is-suggested' : null, th, h('td', 'num', money(r.net)), h('td', 'num', gainBadge(r.gap)),
         h('td', 'num', needed), h('td', 'num', r.crash ? `−${money(r.crash)}` : 'aucune perte'));
     })));
 
-    // Le verdict, en clair
     const reached = result.rows.filter((r) => r.reached).map((r) => r.strategy.name);
     const verdict = [];
     if (result.months === 0) {
@@ -242,7 +439,6 @@ export function mountInvestissementView(root = document) {
     const fields = h('div', 'sv-edit__fields', h('label', 'field sv-edit__wide', h('span', null, 'Objectif'), name), field('Montant visé (€)', target),
       field('Échéance', deadline), field('Déjà mis de côté (€)', saved), field('Versement mensuel (€)', monthly));
 
-    // Partir de vos PEA
     const pfs = pea.accounts().map((a) => portfolio(a, state.ref.annual));
     const fromPea = h('button', 'link-btn', `Partir de vos PEA (${money(pfs.reduce((s, p) => s + p.value, 0))}, ${money(pea.accounts().reduce((s, a) => s + (a.monthly ?? 0), 0))} par mois)`);
     fromPea.type = 'button';
@@ -318,7 +514,7 @@ export function mountInvestissementView(root = document) {
     });
   }
 
-  // ——— Repères : indices et fiscalité ————————————————————————————————————
+  // Reperes : indices et fiscalite
 
   function renderReference() {
     const ctx = {
@@ -338,30 +534,39 @@ export function mountInvestissementView(root = document) {
     peaWidget.render(body, ctx);
   }
 
-  // ——— Export Excel ————————————————————————————————————————————————————
+  // Export Excel
 
-  el.exportBtn.addEventListener('click', () => {
+  el.exportBtn.addEventListener('click', async () => {
     el.exportBtn.disabled = true;
     el.exportBtn.textContent = 'Préparation…';
     try {
-      const workbook = buildInvestWorkbook({
-        ref: state.ref, pea: pea.accounts(), names: state.names, today: state.today, inflation: state.inflation,
-        goals: state.goals, market: market(), peaSim: pea.simOf,
+      const workbook = await buildFullWorkbook({
+        ref: state.ref,
+        pea: pea.accounts(),
+        names: state.names,
+        today: state.today,
+        inflation: state.inflation,
+        goals: state.goals,
+        market: market(),
+        peaSim: pea.simOf,
+        livretModels: state.livretModels,
+        livretSummary: state.livretSummary,
+        rates: state.rates,
       });
-      download(new File([workbook.toBlob()], `mon-budget-investissement-${state.today}.xlsx`, {
+      download(new File([workbook.toBlob()], `notre-budget-bilan-complet-${state.today}.xlsx`, {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       }));
-      showNotice('Classeur Excel prêt : il est dans vos téléchargements.');
+      showNotice('Classeur Excel complet prêt : il est dans vos téléchargements.');
     } catch (err) {
       console.error('[export] Échec :', err);
       showNotice('L\'export n\'a pas abouti. Réessayez, ou rechargez la page.');
     } finally {
       el.exportBtn.disabled = false;
-      el.exportBtn.textContent = 'Exporter en Excel';
+      el.exportBtn.textContent = 'Exporter le bilan Excel';
     }
   });
 
-  // ——— Messages ————————————————————————————————————————————————————————
+  // Messages
 
   let noticeTimer = null;
   function showNotice(text, undo = null) {
@@ -381,7 +586,7 @@ export function mountInvestissementView(root = document) {
   };
 }
 
-// ——— Utilitaires ————————————————————————————————————————————————————
+// Utilitaires
 
 function todayIso() {
   const d = new Date();

@@ -1,11 +1,8 @@
 /**
- * Widgets du tableau de bord « Épargne » : chacun répond à une question sur vos
+ * Widgets du tableau de bord « Epargne » : chacun repond a une question sur vos
  * livrets. Vous choisissez lesquels afficher et dans quel ordre (« Personnaliser »).
- *
- * Un widget : { id, title, description, wide, hint(ctx), control?(ctx), render(body, ctx) }.
- * ctx : { models, livrets, summary, inflation, rates, titleOf, horizon, setHorizon,
- *         expenses, safety, planned, holders, peaYears, setPeaYears, animate, today }
  */
+import { toCents } from '../db/database.js';
 import {
   benchmarks, doublingYears, grossEquivalent, halvingYears, history, realRate,
 } from './indicators.js';
@@ -18,9 +15,9 @@ import {
   INDEX_RETURNS, PEA, globalAverage, indexStats, netValue, peaTax, taxOnExit,
 } from './pea.js';
 
-export const DEFAULT_WIDGETS = ['bulletin', 'matelas', 'gain-reel', 'comparateur', 'projection'];
+export const DEFAULT_WIDGETS = ['projection', 'bulletin', 'matelas', 'gain-reel', 'comparateur'];
 
-/** Widgets proposés avant le matelas de sécurité enrichi : un tableau de bord enregistré avant reçoit les nouveaux. */
+/** Widgets proposes avant le matelas de securite enrichi. */
 export const LEGACY_WIDGETS = ['bulletin', 'gain-reel', 'comparateur', 'projection', 'indices', 'doublement', 'historique', 'matelas'];
 
 const VERDICTS = {
@@ -37,7 +34,7 @@ export function verdictTag(key, label = VERDICTS[key].label) {
   return tag;
 }
 
-/** Matelas de sécurité : verdict et libellé court selon la fourchette conseillée. */
+/** Matelas de securite : verdict et libelle court selon la fourchette conseillee. */
 export function safetyVerdict(safety, real) {
   const { min, max } = SAFETY_MONTHS;
   if (safety.status === 'court') return { verdict: 'attention', label: `Sous ${min} mois` };
@@ -48,7 +45,7 @@ export function safetyVerdict(safety, real) {
 /** « 7,4 mois » */
 export const monthsOf = (n) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} mois`;
 
-/** Une ligne « nom | rail | valeur » sur une échelle commune, avec un repère optionnel. */
+/** Une ligne « nom | rail | valeur » sur une echelle commune, avec un repere optionnel. */
 function rateRow({ name, note, value, ratio, mark, tone = 'saved', color, extra }) {
   const rail = h('span', 'sv-rate__rail');
   const fill = h('span', 'sv-rate__fill');
@@ -65,7 +62,7 @@ function rateRow({ name, note, value, ratio, mark, tone = 'saved', color, extra 
   return { row, fill, ratio };
 }
 
-// ——— Bulletin ————————————————————————————————————————————————————
+// Bulletin
 
 /** Indicateurs du bulletin (aussi repris dans l'export Excel). */
 export function bulletinItems(ctx) {
@@ -106,7 +103,6 @@ export function bulletinItems(ctx) {
     text: `Un compte à terme ou un fonds monétaire rapporte environ l'€STR (${pctOf(estr.gross)}), soit ${pctOf(estr.net)} après le prélèvement forfaitaire de ${pctOf(TAX.pfu)}.`,
   });
 
-  // Le LEP d'une personne rapporte plus que son Livret A et n'est pas plein
   for (const [i, m] of models.entries()) {
     if (m.product !== 'lep' || m.capRoom <= 0) continue;
     const a = models.findIndex((x, j) => x.product === 'livretA' && ctx.livrets[j].profile === ctx.livrets[i].profile);
@@ -171,7 +167,7 @@ const bulletin = {
   },
 };
 
-// ——— Intérêts face à l'inflation ———————————————————————————————————
+// Interets face a l'inflation
 
 const gainReel = {
   id: 'gain-reel',
@@ -206,7 +202,7 @@ const gainReel = {
   },
 };
 
-// ——— Comparateur ———————————————————————————————————————————————————
+// Comparateur
 
 const comparateur = {
   id: 'comparateur',
@@ -233,7 +229,7 @@ const comparateur = {
   },
 };
 
-// ——— Selon l'indice d'inflation ———————————————————————————————————————
+// Selon l'indice d'inflation
 
 const indices = {
   id: 'indices',
@@ -262,7 +258,7 @@ const indices = {
   },
 };
 
-// ——— Temps pour doubler ——————————————————————————————————————————————
+// Temps pour doubler
 
 const doublement = {
   id: 'doublement',
@@ -287,7 +283,7 @@ const doublement = {
   },
 };
 
-// ——— Depuis 2020 ———————————————————————————————————————————————————————
+// Depuis 2020
 
 const SVG = 'http://www.w3.org/2000/svg';
 const svg = (tag, attrs = {}) => {
@@ -309,7 +305,6 @@ const historique = {
       { key: 'prices', name: 'Prix', className: 'is-prices' },
       ...products.map((p, i) => ({ key: p, name: PRODUCTS[p].name, className: `is-livret is-livret-${i}` })),
     ];
-    // Largeur réelle de l'écran : le texte du graphique garde sa taille, du Mac à l'iPhone
     const W = Math.round(Math.min(960, Math.max(300, window.innerWidth - 90)));
     const H = W < 500 ? 200 : 250; const L = 8; const R = 96; const T = 12; const B = 26;
     const all = points.flatMap((pt) => series.map((s) => pt[s.key]));
@@ -318,14 +313,13 @@ const historique = {
     const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
 
     const chart = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'sv-history', role: 'img' });
-    chart.setAttribute('aria-label', series.map((s) => `${s.name} : 100 → ${points.at(-1)[s.key].toFixed(1)}`).join(', '));
+    chart.setAttribute('aria-label', series.map((s) => `${s.name} : 100 -> ${points.at(-1)[s.key].toFixed(1)}`).join(', '));
     chart.append(svg('line', { x1: L, x2: W - R, y1: y(100), y2: y(100), class: 'sv-history__base' }));
     points.forEach((pt, i) => {
       const label = svg('text', { x: x(i), y: H - 6, class: 'sv-history__year', 'text-anchor': 'middle' });
-      label.textContent = String(from + i); // chaque point = 1er janvier de l'année
+      label.textContent = String(from + i);
       if (W >= 500 || i === 0 || i === points.length - 1 || i % 2 === 0) chart.append(label);
     });
-    // Étiquettes de fin de ligne, écartées si elles se chevauchent
     const ends = series.map((s) => ({ s, v: points.at(-1)[s.key], ly: y(points.at(-1)[s.key]) })).sort((a, b) => a.ly - b.ly);
     for (let i = 1; i < ends.length; i++) ends[i].ly = Math.max(ends[i].ly, ends[i - 1].ly + 15);
     for (const s of series) {
@@ -354,7 +348,7 @@ const historique = {
   },
 };
 
-// ——— Matelas de sécurité ————————————————————————————————————————————
+// Matelas de securite
 
 const matelas = {
   id: 'matelas',
@@ -375,7 +369,6 @@ const matelas = {
     rail.style.setProperty('--from', pct(min / scale));
     rail.style.setProperty('--to', pct(max / scale));
     const fill = h('span', 'sv-safety__fill');
-    // Zone conseillée en fond, et deux entailles qui restent visibles sur le remplissage
     rail.append(h('span', 'sv-safety__zone'), fill, h('span', 'sv-safety__cuts'));
     rail.setAttribute('role', 'img');
     rail.setAttribute('aria-label', `${monthsOf(safety.months)} couverts ; zone conseillée de ${min} à ${max} mois`);
@@ -389,7 +382,6 @@ const matelas = {
     const value = h('p', 'sv-safety__value', h('strong', null, monthsOf(safety.months)),
       ` de dépenses couverts par vos livrets (${money(ctx.summary.balance)}) `, verdictTag(verdict, label));
 
-    // Les dépenses mesurées, mois par mois
     const holderNote = ctx.holders ? ` de ${ctx.holders}` : '';
     const detail = expenses.months.map((m) => `${monthShort(m)} ${money(expenses.byMonth.get(m))}`).join(' · ');
     const stat = (term, val, note) => h('div', null, h('dt', null, term), h('dd', null, val), note ? h('small', null, note) : null);
@@ -403,7 +395,7 @@ const matelas = {
         ? stat('À votre rythme', `${safety.reachIn} mois`, `pour atteindre ${min} mois, avec ${money(ctx.planned)} versés chaque mois`)
         : stat('À votre rythme', 'Aucun versement régulier', `${money(Math.ceil(safety.gap / 12 / 1000) * 1000)} par mois l'atteindraient en un an`);
     } else if (safety.surplus > 0) {
-      pace = stat(`Au-delà de ${max} mois`, money(safety.surplus), 'disponibles pour un placement de long terme (voir l\'onglet « Investir »)');
+      pace = stat(`Au-delà de ${max} mois`, money(safety.surplus), 'disponibles pour un placement de long terme (voir l\'onglet « Investissement »)');
     } else {
       pace = stat('Marge', money(ctx.summary.balance - safety.low), `au-dessus de ${min} mois`);
     }
@@ -417,7 +409,7 @@ const matelas = {
   },
 };
 
-// ——— PEA ——————————————————————————————————————————————————————————————
+// PEA : rendement des indices et fiscalite
 
 export const peaWidget = {
   id: 'pea',
@@ -426,7 +418,7 @@ export const peaWidget = {
   wide: true,
   hint: (ctx) => {
     const g = globalAverage(ctx.peaYears, ctx.ref.annual);
-    return `Performances annuelles ${g.from}–${g.to} en euros, dividendes réinvestis, hors frais d'ETF (souvent 0,1 à 0,4 % par an). Les performances passées ne préjugent pas des performances futures.`;
+    return `Performances annuelles de ${g.from} à ${g.to} en euros, dividendes réinvestis, hors frais d'ETF (souvent 0,1 à 0,4 % par an). Les performances passées ne préjugent pas des performances futures.`;
   },
   control(ctx) {
     const field = h('fieldset', 'segmented');
@@ -445,17 +437,15 @@ export const peaWidget = {
     const after = taxOnExit(global.cagr, 10, PEA.taxAfter);
     const livretRate = ctx.summary.rate / 100;
 
-    // Trois chiffres clés
     const tile = (label, value, note) => h('div', 'sv-kpi', h('dt', null, label), h('dd', null, value), h('small', null, note));
     const kpis = h('dl', 'sv-kpis',
       tile('Rendement moyen des indices mondiaux', h('span', 'sv-num', `${pct1(global.cagr)} / an`),
-        h('span', null, `MSCI World et MSCI ACWI, ${global.from}–${global.to} · `, realBadge(global.real, ' après inflation'))),
+        h('span', null, `MSCI World et MSCI ACWI, de ${global.from} à ${global.to} · `, realBadge(global.real, ' après inflation'))),
       tile(`Imposition d'un PEA de plus de ${PEA.years} ans`, h('span', 'sv-num', `${pctOf(PEA.taxAfter)} des gains`),
         `soit ${pct1(after.onWithdrawal)} en moyenne de la somme retirée après 10 ans à ce rythme : les versements ne sont jamais imposés`),
       tile('Rendement net d\'un PEA sur 10 ans', h('span', 'sv-num', `${pct1(after.netRate)} / an`),
         h('span', null, `prélèvements sociaux payés · ${signedPoints(Math.round((after.netRate - livretRate) * 1000) / 10)} face ${ctx.livretLabel ?? 'à vos livrets'} (${pctOf(ctx.summary.rate)})`)));
 
-    // Indice par indice
     const table = h('table', 'sv-table sv-table--pea');
     table.append(h('caption', 'visually-hidden', `Rendement des indices sur ${n} ans`));
     table.append(h('thead', null, h('tr', null, h('th', null, 'Indice'), h('th', 'num', `Moyenne ${n} ans`),
@@ -467,13 +457,12 @@ export const peaWidget = {
       th.scope = 'row';
       tbody.append(h('tr', null, th,
         h('td', 'num', `${pct1(st.cagr)} / an`),
-        h('td', 'num', st.real == null ? '—' : realBadge(st.real)),
+        h('td', 'num', st.real == null ? 'Non disponible' : realBadge(st.real)),
         h('td', 'num', `${pct1(taxOnExit(st.cagr, 10, PEA.taxAfter).netRate)} / an`),
         h('td', 'num', realBadge(st.worst.rate, ` (${st.worst.year})`))));
     }
     table.append(tbody);
 
-    // Imposition moyenne selon la durée de détention
     const taxTable = h('table', 'sv-table sv-table--compact sv-table--pea');
     taxTable.append(h('caption', 'visually-hidden', 'Imposition moyenne selon la durée de détention'));
     taxTable.append(h('thead', null, h('tr', null, h('th', null, 'Retrait après'), h('th', 'num', 'Taux sur les gains'),
@@ -493,7 +482,6 @@ export const peaWidget = {
     const world = indexStats(INDEX_RETURNS[0], n, ctx.ref.annual);
     const parts = [kpis, h('div', 'sv-table__wrap', table)];
 
-    // Le surplus du matelas, placé 10 ans
     if (ctx.safety?.surplus > 0) {
       const sum = Math.round(ctx.safety.surplus / 10000) * 10000;
       const onPea = netValue(sum, global.cagr, 10, PEA.taxAfter);
@@ -505,102 +493,326 @@ export const peaWidget = {
       h('p', 'card__hint', `Le risque : pire année ${signedPct(world.worst.rate)} (${world.worst.year}) pour le MSCI World, ${world.negative} année${world.negative > 1 ? 's' : ''} négative${world.negative > 1 ? 's' : ''} sur ${world.years}. Le capital n'est pas garanti : un PEA convient à l'argent dont vous n'aurez pas besoin avant ${PEA.years} ans au moins, une fois le matelas de sécurité en place.`),
       h('h4', 'sv-widget__sub', 'Imposition moyenne selon la durée'),
       h('div', 'sv-table__wrap', taxTable),
-      h('p', 'card__hint', `Seuls les gains sont imposés, au retrait. Avant ${PEA.years} ans : ${pctOf(TAX.pfu)} (${pctOf(TAX.incomeTax)} d'impôt + ${pctOf(TAX.social)} de prélèvements sociaux) et clôture du plan. Après ${PEA.years} ans : ${pctOf(PEA.taxAfter)} de prélèvements sociaux seulement, retraits partiels possibles sans clôture. Compte-titres : ${pctOf(TAX.pfu)} quelle que soit la durée (calcul simplifié : ses dividendes sont en réalité imposés chaque année). Plafond des versements : ${money(PEA.cap)} par personne. Calculs au rendement moyen des indices mondiaux sur ${n} ans (${pct1(global.cagr)} / an).`),
+      h('p', 'card__hint', `Seuls les gains sont imposés, au retrait. Avant ${PEA.years} ans : ${pctOf(TAX.pfu)} (${pctOf(TAX.incomeTax)} d'impôt + ${pctOf(TAX.social)} de prélèvements sociaux) et clôture du plan. Après ${PEA.years} ans : ${pctOf(PEA.taxAfter)} de prélèvements sociaux seulement, retraits partiels possibles sans clôture. Compte-titres : ${pctOf(TAX.pfu)} quelle que soit la durée. Plafond des versements : ${money(PEA.cap)} par personne. Calculs au rendement moyen des indices mondiaux sur ${n} ans (${pct1(global.cagr)} / an).`),
     );
     body.append(...parts);
   },
 };
 
-// ——— Projection ———————————————————————————————————————————————————————
+// Projection des livrets : simulateur interactif, selection au clic et tableau annuel complet
 
-const projection = {
-  id: 'projection',
-  title: 'Projection',
-  description: 'Solde au 31 décembre des prochaines années, et ce qu\'il vaudra en euros d\'aujourd\'hui.',
-  wide: true,
-  hint(ctx) {
-    const planned = ctx.models.reduce((s, m) => s + m.plan.monthly, 0);
-    return `Solde au 31 décembre de chaque année. Les intérêts versés chaque 31 décembre rapportent à leur tour l'année suivante (intérêts composés). ${planned > 0
-      ? `Vos virements réguliers continuent (${money(planned)} par mois, jusqu'aux plafonds)`
-      : 'Aucun virement régulier repéré : pas de nouveau versement'}, aux taux actuels, avec ${pctOf(ctx.inflation.rate)} d'inflation par an.`;
-  },
-  control(ctx) {
-    const field = h('fieldset', 'segmented');
-    field.append(h('legend', 'visually-hidden', 'Horizon de la projection'));
-    for (const n of [3, 5, 10]) {
-      const input = document.createElement('input');
-      Object.assign(input, { type: 'radio', name: 'sv-horizon', value: String(n), checked: n === ctx.horizon });
-      field.append(h('label', null, input, h('span', null, `${n} ans`)));
-    }
-    field.addEventListener('change', (e) => ctx.setHorizon(Number(e.target.value)));
-    return field;
-  },
-  render(body, ctx) {
-    const { summary } = ctx;
+const decimal = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+let livretSimExtra = null; // centimes/mois testes dans le simulateur de projection livrets
+let livretSelectedIdx = null;
+
+function simulateLivretColumns(ctx, monthlyOverride) {
+  const { models, summary, inflation } = ctx;
+  const basePlanned = models.reduce((s, m) => s + m.plan.monthly, 0);
+  if (monthlyOverride == null || monthlyOverride === basePlanned) {
     const columns = [
-      { label: 'Auj.', end: summary.balance, real: summary.balance, today: true },
+      { label: 'Auj.', full: 'Aujourd\'hui', end: summary.balance, real: summary.balance, deposits: 0, interest: 0, compound: 0, today: true },
       ...summary.years.map((y) => ({ label: String(y.year), full: `Fin ${y.year}`, ...y })),
     ];
     let cumulated = 0;
     let compounded = 0;
+    let cumDeposits = 0;
     for (const c of columns) {
-      if (c.today) continue;
+      if (c.today) {
+        c.cumulated = 0;
+        c.compounded = 0;
+        c.cumDeposits = 0;
+        continue;
+      }
       c.cumulated = (cumulated += c.interest);
       c.compounded = (compounded += c.compound);
+      c.cumDeposits = (cumDeposits += c.deposits);
     }
-    const max = Math.max(1, ...columns.map((c) => c.end)) * 1.12;
+    return columns;
+  }
 
-    const chart = h('div', 'sv-chart');
-    chart.setAttribute('role', 'list');
-    const labels = h('div', 'sv-chart__labels');
-    labels.setAttribute('aria-hidden', 'true');
-    for (const node of [chart, labels]) node.style.setProperty('--cols', columns.length);
-    const readout = h('p', 'trend__readout');
-    readout.setAttribute('aria-live', 'polite');
+  // Simulation rapide avec versement mensuel personnalise (reparti en priorite sur le livret au meilleur taux non plein)
+  const ordered = models.map((m) => ({
+    balance: m.balance,
+    cap: m.cap,
+    rate: m.rate,
+  })).sort((a, b) => b.rate - a.rate);
 
-    const heights = columns.map((c, i) => {
-      const col = h('button', 'sv-col');
-      col.type = 'button';
-      col.setAttribute('role', 'listitem');
-      col.classList.toggle('is-today', Boolean(c.today));
-      col.classList.toggle('is-last', i === columns.length - 1);
-      const text = c.today
-        ? `Aujourd'hui : ${money(c.end)} sur vos livrets.`
-        : `${c.full} : ${money(c.end)} sur vos livrets, dont ${money(c.cumulated)} d'intérêts d'ici là (${money(c.compounded)} gagnés sur des intérêts déjà versés). En euros d'aujourd'hui, cela vaudra ${money(c.real)}.`;
-      col.setAttribute('aria-label', text);
-      col.dataset.readout = text;
-      col.append(h('span', 'sv-col__value', money(c.end)), h('span', 'sv-col__bar'));
-      if (!c.today) col.append(h('span', 'sv-col__real'));
-      chart.append(col);
-      const label = h('span', null, c.label);
-      label.classList.toggle('is-today', Boolean(c.today));
-      labels.append(label);
-      return [col, c.end / max, c.real / max];
+  const thisYear = Number(ctx.today.slice(0, 4));
+  const currentMonth = Number(ctx.today.slice(5, 7));
+  const remMonthsThisYear = Math.max(0, 12 - currentMonth);
+
+  const columns = [
+    { label: 'Auj.', full: 'Aujourd\'hui', end: summary.balance, real: summary.balance, deposits: 0, interest: 0, compound: 0, cumulated: 0, compounded: 0, cumDeposits: 0, today: true },
+  ];
+
+  let cumInterest = 0;
+  let cumCompound = 0;
+  let cumDeposits = 0;
+  let capitalized = 0;
+
+  for (let idx = 0; idx <= ctx.horizon; idx++) {
+    const yr = thisYear + idx;
+    const months = idx === 0 ? remMonthsThisYear : 12;
+    let yearDeposits = 0;
+    let yearInterest = 0;
+
+    for (let m = 0; m < months; m++) {
+      let leftToDeposit = monthlyOverride;
+      for (const acc of ordered) {
+        const room = Math.max(0, acc.cap - acc.balance);
+        const add = Math.min(leftToDeposit, room);
+        acc.balance += add;
+        leftToDeposit -= add;
+        yearDeposits += add;
+      }
+    }
+
+    for (const acc of ordered) {
+      const factor = idx === 0 ? Math.max(0.1, (13 - currentMonth) / 12) : 1;
+      const gain = Math.round(acc.balance * (acc.rate / 100) * factor);
+      yearInterest += gain;
+    }
+
+    const avgRate = summary.rate || (ordered[0]?.rate ?? 0);
+    const compound = idx > 0 ? Math.round(capitalized * (avgRate / 100)) : 0;
+    for (const acc of ordered) {
+      if (ordered.indexOf(acc) === 0) acc.balance += yearInterest;
+    }
+    capitalized += yearInterest;
+    cumInterest += yearInterest;
+    cumCompound += compound;
+    cumDeposits += yearDeposits;
+
+    const totalEnd = ordered.reduce((s, a) => s + a.balance, 0);
+    const yearsElapsed = idx === 0 ? Math.max(0.1, (13 - currentMonth) / 12) : idx + (13 - currentMonth) / 12;
+    const real = Math.round(totalEnd / (1 + inflation.rate / 100) ** yearsElapsed);
+
+    columns.push({
+      year: yr,
+      label: String(yr),
+      full: `Fin ${yr}`,
+      end: totalEnd,
+      real,
+      interest: yearInterest,
+      compound,
+      deposits: yearDeposits,
+      cumulated: cumInterest,
+      compounded: cumCompound,
+      cumDeposits,
+    });
+  }
+
+  return columns;
+}
+
+const projection = {
+  id: 'projection',
+  title: 'Projection des livrets et échéancier annuel',
+  description: 'Solde au 31 décembre des prochaines années, simulateur de versement mensuel et tableau annuel complet.',
+  wide: true,
+  hint(ctx) {
+    const planned = ctx.models.reduce((s, m) => s + m.plan.monthly, 0);
+    return `Solde au 31 décembre de chaque année avec intérêts composés. ${planned > 0
+      ? `Vos virements réguliers actuels représentent ${money(planned)} par mois (jusqu'aux plafonds)`
+      : 'Aucun virement régulier repéré actuellement : utilisez le simulateur ci-dessous pour tester un versement mensuel'}, aux taux en vigueur et avec ${pctOf(ctx.inflation.rate)} d'inflation par an.`;
+  },
+  control(ctx) {
+    const field = h('fieldset', 'segmented');
+    field.append(h('legend', 'visually-hidden', 'Horizon de la projection'));
+    for (const n of [3, 5, 10, 15]) {
+      const input = document.createElement('input');
+      Object.assign(input, { type: 'radio', name: 'sv-horizon', value: String(n), checked: n === ctx.horizon });
+      field.append(h('label', null, input, h('span', null, `${n} ans`)));
+    }
+    field.addEventListener('change', (e) => {
+      livretSelectedIdx = null;
+      ctx.setHorizon(Number(e.target.value));
+    });
+    return field;
+  },
+  render(body, ctx) {
+    const basePlanned = ctx.models.reduce((s, m) => s + m.plan.monthly, 0);
+    if (livretSimExtra == null) livretSimExtra = basePlanned;
+
+    const input = document.createElement('input');
+    Object.assign(input, {
+      type: 'text',
+      inputMode: 'decimal',
+      autocomplete: 'off',
+      value: livretSimExtra ? decimal.format(livretSimExtra / 100) : '',
+      placeholder: '0',
+    });
+    const monthlyField = h('label', 'field sv-pea__monthly', h('span', null, 'Versement mensuel simulé (€)'), input);
+
+    const quickBtns = h('div', 'sv-quick-btns');
+    for (const step of [5000, 10000, 25000]) {
+      const btn = h('button', 'sv-quick-btn', `+${step / 100} €`);
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        livretSimExtra = (livretSimExtra ?? basePlanned) + step;
+        input.value = decimal.format(livretSimExtra / 100);
+        draw(false);
+      });
+      quickBtns.append(btn);
+    }
+    const resetBtn = h('button', 'sv-quick-btn', `Prévu (${money(basePlanned)})`);
+    resetBtn.type = 'button';
+    resetBtn.addEventListener('click', () => {
+      livretSimExtra = basePlanned;
+      input.value = livretSimExtra ? decimal.format(livretSimExtra / 100) : '';
+      draw(false);
+    });
+    quickBtns.append(resetBtn);
+
+    const controls = h('div', 'sv-pea__controls', monthlyField, quickBtns);
+    const results = h('div', 'sv-pea__results');
+    body.append(controls, results);
+
+    input.addEventListener('input', () => {
+      const text = input.value.trim();
+      let cents = 0;
+      try { cents = text ? toCents(text) : 0; } catch { return; }
+      if (cents < 0) return;
+      livretSimExtra = cents;
+      draw(false);
     });
 
-    const show = (e) => { readout.textContent = e.target.closest('.sv-col')?.dataset.readout ?? ''; };
-    chart.addEventListener('pointerover', show);
-    chart.addEventListener('focusin', show);
-    chart.addEventListener('pointerleave', () => { readout.textContent = ''; });
-
-    const legend = h('p', 'sv-legend',
-      h('span', null, h('i', 'key key--today'), 'Aujourd\'hui'),
-      h('span', null, h('i', 'key key--upcoming'), 'Solde prévu au 31 décembre'),
-      h('span', null, h('i', 'key key--real'), 'Ce qu\'il vaudra en euros d\'aujourd\'hui'));
-    legend.querySelectorAll('i').forEach((i) => i.setAttribute('aria-hidden', 'true'));
-    body.append(chart, labels, legend, readout);
-
-    const apply = () => {
-      for (const [col, hgt, real] of heights) {
-        col.style.setProperty('--h', pct(hgt));
-        col.style.setProperty('--r', pct(real));
+    function draw(animate) {
+      const columns = simulateLivretColumns(ctx, livretSimExtra);
+      if (livretSelectedIdx == null || livretSelectedIdx >= columns.length) {
+        livretSelectedIdx = columns.length - 1;
       }
-    };
-    if (!ctx.animate) return apply();
-    for (const [col] of heights) { col.style.setProperty('--h', '0%'); col.style.setProperty('--r', '0%'); }
-    requestAnimationFrame(() => requestAnimationFrame(apply));
+      const max = Math.max(1, ...columns.map((c) => c.end)) * 1.14;
+
+      const chart = h('div', 'sv-chart');
+      chart.setAttribute('role', 'list');
+      const labels = h('div', 'sv-chart__labels');
+      labels.setAttribute('aria-hidden', 'true');
+      for (const node of [chart, labels]) node.style.setProperty('--cols', columns.length);
+
+      const readoutBox = h('div', 'sv-readout-box');
+      readoutBox.setAttribute('aria-live', 'polite');
+
+      const every = columns.length > 12 ? 3 : columns.length > 8 ? 2 : 1;
+      const labelSpans = [];
+      const tableRows = [];
+
+      const formatReadout = (c) => {
+        if (c.today) {
+          return h('div', null,
+            h('strong', null, `Aujourd'hui : ${money(c.end)}`),
+            ` répartis sur vos livrets (taux moyen pondéré : ${pctOf(ctx.summary.rate)} net).`);
+        }
+        const totalInvested = Math.max(0, c.end - c.cumulated);
+        return h('div', null,
+          h('strong', null, `${c.full} : ${money(c.end)} sur vos livrets`),
+          ` · Fonds investis cumulés : ${money(totalInvested)} · Intérêts cumulés gagnés : ${money(c.cumulated)} (dont ${money(c.compounded)} d'intérêts composés) · `,
+          h('strong', null, `Pouvoir d'achat : ${money(c.real)}`),
+          ' en euros d\'aujourd\'hui.');
+      };
+
+      const selectCol = (idx) => {
+        livretSelectedIdx = idx;
+        const c = columns[idx] ?? columns.at(-1);
+        heights.forEach(([col], i) => col.classList.toggle('is-selected', i === idx));
+        labelSpans.forEach((sp, i) => sp.classList.toggle('is-selected', i === idx));
+        tableRows.forEach((tr, i) => tr.classList.toggle('is-selected', i === idx));
+        readoutBox.replaceChildren(formatReadout(c));
+      };
+
+      const heights = columns.map((c, i) => {
+        const col = h('button', 'sv-col');
+        col.type = 'button';
+        col.setAttribute('role', 'listitem');
+        const isMilestone = i === 0 || i === columns.length - 1 || i % every === 0;
+        col.classList.toggle('is-today', Boolean(c.today));
+        col.classList.toggle('is-last', i === columns.length - 1);
+        col.classList.toggle('is-milestone', isMilestone);
+
+        const gainShare = c.end > 0 && c.cumulated > 0 ? (c.cumulated / c.end) * 100 : 0;
+        const totalInvested = Math.max(0, c.end - c.cumulated);
+        const gainSeg = h('span', 'sv-col__bar-gain',
+          c.cumulated > 0 ? h('span', 'sv-col__seg-label sv-col__seg-label--gain', `+${money(c.cumulated)}`) : null);
+        const contribSeg = h('span', 'sv-col__bar-contrib',
+          totalInvested > 0 ? h('span', 'sv-col__seg-label sv-col__seg-label--contrib', money(totalInvested)) : null);
+        const bar = h('span', 'sv-col__bar', gainSeg, contribSeg);
+        bar.style.setProperty('--gain-h', `${gainShare.toFixed(1)}%`);
+
+        col.append(h('span', 'sv-col__value', money(c.end)), bar);
+        if (!c.today) col.append(h('span', 'sv-col__real'));
+        col.setAttribute('aria-label', `${c.full} : ${money(c.end)} (Fonds : ${money(totalInvested)}, Intérêts : ${money(c.cumulated)})`);
+        col.addEventListener('click', () => selectCol(i));
+        chart.append(col);
+
+        const label = h('span', 'sv-col__meta',
+          h('strong', 'sv-col__meta-year', c.label),
+          h('span', 'sv-col__meta-gain', c.cumulated > 0 ? `+${money(c.cumulated)} (${Math.round(gainShare)} %)` : '0 € d\'int.'),
+          h('span', 'sv-col__meta-contrib', `Fonds : ${money(totalInvested)}`),
+        );
+        label.classList.toggle('is-today', Boolean(c.today));
+        labelSpans.push(label);
+        labels.append(label);
+        return [col, c.end / max, c.real / max];
+      });
+
+      const legend = h('p', 'sv-legend',
+        h('span', null, h('i', 'key key--contrib'), 'Capital et versements (fonds investis)'),
+        h('span', null, h('i', 'key key--gain'), 'Intérêts composés cumulés gagnés'),
+        h('span', null, h('i', 'key key--real'), 'Valeur en euros d\'aujourd\'hui (pouvoir d\'achat)'),
+        h('span', null, 'Lecture directe sans clic requis'));
+      legend.querySelectorAll('i').forEach((i) => i.setAttribute('aria-hidden', 'true'));
+
+      // Tableau annuel complet sous le graphique
+      const table = h('table', 'sv-table sv-table--compact');
+      table.append(
+        h('caption', 'visually-hidden', 'Échéancier annuel de la projection des livrets'),
+        h('thead', null, h('tr', null,
+          h('th', null, 'Échéance'),
+          h('th', 'num', 'Fonds investis cumulés'),
+          h('th', 'num', 'Versements de l\'année'),
+          h('th', 'num', 'Intérêts de l\'année'),
+          h('th', 'num', 'Intérêts cumulés'),
+          h('th', 'num', 'Solde au 31 déc.'),
+          h('th', 'num', 'En € d\'aujourd\'hui'))),
+      );
+      const tbody = h('tbody');
+      columns.forEach((c, idx) => {
+        const th = h('th', null, c.today || idx === columns.length - 1 ? h('strong', null, c.full) : c.full);
+        th.scope = 'row';
+        const totalInvested = Math.max(0, c.end - c.cumulated);
+        const tr = h('tr', null,
+          th,
+          h('td', 'num', money(totalInvested)),
+          h('td', 'num', c.today ? 'Solde initial' : money(c.deposits)),
+          h('td', 'num', c.today ? '0 €' : signedMoney(c.interest)),
+          h('td', 'num', c.today ? '0 €' : `${money(c.cumulated)}${c.compounded > 0 ? ` (dont ${money(c.compounded)} composés)` : ''}`),
+          h('td', 'num', h('strong', null, money(c.end))),
+          h('td', 'num', money(c.real)));
+        tr.dataset.yearIdx = String(idx);
+        tr.addEventListener('click', () => selectCol(idx));
+        tableRows.push(tr);
+        tbody.append(tr);
+      });
+      table.append(tbody);
+
+      const chartScroll = h('div', 'sv-chart__scroll', chart, labels);
+      results.replaceChildren(chartScroll, legend, readoutBox, h('div', 'sv-table__wrap', table));
+      selectCol(livretSelectedIdx);
+
+      const apply = () => {
+        for (const [col, hgt, real] of heights) {
+          col.style.setProperty('--h', pct(hgt));
+          col.style.setProperty('--r', pct(real));
+        }
+      };
+      if (!animate) return apply();
+      for (const [col] of heights) { col.style.setProperty('--h', '0%'); col.style.setProperty('--r', '0%'); }
+      requestAnimationFrame(() => requestAnimationFrame(apply));
+    }
+
+    draw(ctx.animate);
   },
 };
 
-export const WIDGETS = [bulletin, matelas, gainReel, comparateur, projection, indices, doublement, historique];
+export const WIDGETS = [projection, bulletin, matelas, gainReel, comparateur, indices, doublement, historique];
 export const widgetById = new Map(WIDGETS.map((w) => [w.id, w]));
